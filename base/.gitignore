@@ -1,0 +1,11 @@
+*.pyc
+/logs
+.idea/
+/static/income
+*.rdb
+/test.py
+.qiniu_pythonsdk_hostscache.json
+*.reg
+app.tar.gz
+bin/
+zeroc-ice-3.7.0/

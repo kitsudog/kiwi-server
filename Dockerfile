@@ -1,0 +1,19 @@
+FROM python:3.8
+ARG GIT_TAG=no-tag
+WORKDIR /app/server
+COPY requirements.txt /app/server/requirements.txt
+# export ARCHFLAGS="-arch x86_64"
+RUN pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+COPY . /app/server
+WORKDIR /app/server
+VOLUME /app/server/static/uploads
+ENV PYTHONUNBUFFERED=1 \
+    PYTHON_PRETTY_ERRORS_ISATTY_ONLY=1 \
+    LANG=C.UTF-8 \
+    MONGO_HOST=mongo \
+    REDIS_HOST=redis \
+    DB_HOST=mysql \
+    GIT_TAG=$GIT_TAG \
+    TZ=Asia/Shanghai
+EXPOSE 8000
+ENTRYPOINT sh -c "python migrate.py && python app.py --tag=$GIT_TAG"
