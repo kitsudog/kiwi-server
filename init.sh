@@ -1,2 +1,49 @@
 #!/usr/bin/env bash
 # 初始化整个项目的结构
+SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR=$(python -c "import os;print(os.path.realpath('${SCRIPT_DIR}'))")
+echo "SCRIPT_DIR=${SCRIPT_DIR}"
+cd "$SCRIPT_DIR" || exit 1
+cd ..
+test "$(pwd | awk -F/ '{print $NF}')" == "project" || echo 不是项目目录
+cd ..
+BASE_DIR=project/kiwi_server
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/app.py"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/alembic.ini"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/.dockerignore"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/.gitignore"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/config.py"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/Dockerfile"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/migrate.py"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/base"
+# shellcheck disable=SC2226
+ln -sF "${BASE_DIR}/frameworks"
+
+mkdir -p modules
+if [ ! -x modules/__init__.py ]; then
+  cat <<EOF >modules/__init__.py
+EOF
+fi
+
+MODULES=$(find project -type d -iname modules | cut -d/ -f2)
+
+find project -type d -iname modules | while read line; do
+  # shellcheck disable=SC2012
+  ln -sF "../${line}/$(ls "${line}" | head -n1)" modules/
+done
+
+mkdir -p conf
+cat <<EOF >conf/module.conf
+{
+    "main":$(echo "$MODULES" | python -c"import sys,json;print(json.dumps(sys.stdin.read().splitlines()))"),
+}
+EOF
+echo SUCC
