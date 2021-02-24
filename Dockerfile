@@ -8,6 +8,7 @@ COPY . /app/server
 WORKDIR /app/server
 VOLUME /app/server/static/uploads
 ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/server \
     PYTHON_PRETTY_ERRORS_ISATTY_ONLY=1 \
     LANG=C.UTF-8 \
     MONGO_HOST=mongo \
