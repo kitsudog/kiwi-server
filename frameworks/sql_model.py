@@ -8,14 +8,13 @@ from functools import partial
 from typing import Dict, Type, Iterable, List
 from uuid import uuid4
 
+import config
+from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, DateTime, Column, String, BIGINT, JSON
 from sqlalchemy.orm import Session, sessionmaker, Query, scoped_session
 from sqlalchemy.orm.attributes import InstrumentedAttribute, flag_modified
 from sqlalchemy.pool import QueuePool
-
-import config
-from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 
 db = SQLAlchemy()
 
@@ -477,7 +476,7 @@ def _sql_session(schema: str) -> Session:
 
 
 def __init_model():
-    for root, _, files in os.walk("modules"):
+    for root, _, files in os.walk("modules", followlinks=True):
         for each in files:
             if each == "models.py":
                 exec(f"import {root.replace('/', '.')}.{each[:-3]}")

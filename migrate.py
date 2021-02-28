@@ -7,14 +7,14 @@ import alembic.config
 
 from base.style import Block, active_console
 from base.utils import read_file, md5
-from frameworks import db_sample
-# 激活migrate之前注册所有相关的model
-from frameworks.sql_model import sql_alchemy_binds
 
-db_sample.prepare()
+
+# 激活migrate之前注册所有相关的model
 
 
 def get_sign():
+    from frameworks.sql_model import sql_alchemy_binds
+
     alembic.config.main(["upgrade", "head", "--sql"])
     sql = {}
     for key, value in sql_alchemy_binds.items():
@@ -48,4 +48,11 @@ def main():
 
 
 if __name__ == '__main__':
+    # pythonpath注入
+    import sys
+
+    sys.path.insert(0, os.path.dirname(sys.argv[0]))
+    from frameworks import db_sample
+
+    db_sample.prepare()
     main()
