@@ -4,7 +4,7 @@ SCRIPT_DIR=$(dirname "$0")
 SCRIPT_DIR=$(python -c "import os;print(os.path.realpath('${SCRIPT_DIR}'))")
 echo "SCRIPT_DIR=${SCRIPT_DIR}"
 cd "$SCRIPT_DIR" || exit 1
-cd ..
+cd ../..
 test "$(pwd | awk -F/ '{print $NF}')" == "project" || echo 不是项目目录
 cd ..
 BASE_DIR=project/kiwi_server
@@ -33,12 +33,12 @@ if [ ! -x modules/__init__.py ]; then
 EOF
 fi
 
-MODULES=$(find project -type d -iname modules | cut -d/ -f2)
-
 find project -type d -iname modules | while read line; do
   # shellcheck disable=SC2012
   ln -sF "../${line}/$(ls "${line}" | head -n1)" modules/
 done
+
+MODULES=$(find -L modules -iname main.py -d 2 | cut -d/ -f2 | sort)
 
 mkdir -p conf
 cat <<EOF >conf/module.conf
