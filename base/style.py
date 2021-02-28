@@ -25,11 +25,11 @@ import traceback
 import urllib.parse
 import zlib
 from abc import abstractmethod
-from collections import OrderedDict, ChainMap
+from collections import OrderedDict, ChainMap, defaultdict
 from copy import deepcopy
 from json import JSONEncoder
 from logging.handlers import TimedRotatingFileHandler
-from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn
+from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn, DefaultDict
 
 import sentry_sdk
 from sentry_sdk.tracing import Span
@@ -633,11 +633,11 @@ def Catch(func: Callable[[], any]) -> NoReturn:
 
 
 # noinspection PyArgumentList
-def group_by(array: Iterable[T], /, *, field=None, prop: str = None, key: str = None, func: Callable[[T], KT] = None) -> \
-        Dict[KT, List[T]]:
+def group_by(array: Iterable[T], /, *, field=None, prop: str = None, key: str = None, func: Callable[[T], KT] = None) \
+        -> Dict[KT, List[T]]:
     """
-        数组转map
-        """
+    数组转map
+    """
     ret = {}
     if field is not None:
         if isinstance(field, property):
@@ -765,11 +765,23 @@ def collect(array: Iterable[T], /, *,
     return ret
 
 
+def count_dict(init_value: int = 0) -> DefaultDict:
+    return defaultdict(lambda: init_value)
+
+
 def now() -> int:
     """
     ms
     """
     return int(time.time() * 1000)
+
+
+def hour() -> int:
+    """
+    0~23
+    """
+    _now = now()
+    return (_now - day_zero(_now)) // HOUR_TS
 
 
 def week_str() -> str:
@@ -809,7 +821,7 @@ def date_str(ts: Optional[int] = None, /) -> str:
     return time.strftime("%Y-%m-%d", time.localtime(ts / 1000))
 
 
-def str_date(src: str):
+def str_date(src: str) -> int:
     return int(datetime.datetime.strptime(src, "%Y-%m-%d").timestamp() * 1000)
 
 
@@ -822,7 +834,10 @@ def date_str8(ts: Optional[int] = None, /) -> str:
     return time.strftime("%y-%m-%d", time.localtime(ts / 1000))
 
 
-def str8_date(src: str):
+def str8_date(src: str) -> int:
+    """
+    20-01-31
+    """
     return int(datetime.datetime.strptime(src, "%y-%m-%d").timestamp() * 1000)
 
 
@@ -836,6 +851,9 @@ def date_str10(ts: Optional[int] = None, /) -> str:
 
 
 def str10_date(src: str):
+    """
+    2020110407
+    """
     return int(datetime.datetime.strptime(src, "%Y%m%d%H").timestamp() * 1000)
 
 
@@ -887,7 +905,7 @@ def date_str6(ts: Optional[int] = None, /) -> str:
     return time.strftime("%y%m%d", time.localtime(ts / 1000))
 
 
-def str6_date(src: str):
+def str6_date(src: str) -> int:
     return int(datetime.datetime.strptime(src, "%y%m%d").timestamp() * 1000)
 
 

@@ -1,4 +1,4 @@
-from typing import List, Set, Type, Dict
+from typing import List, Set, Type, Dict, Union
 
 from base.interface import ITick, IService
 from base.style import Assert, now, json_str, has_sentry
@@ -19,7 +19,7 @@ class ServerContext(Context):
         self.service_list.add(service)
         return service
 
-    def add_mgr(self, mgr):
+    def add_mgr(self, mgr: Union[IService, ITick]):
         """
         仅仅只是为了管理而已
         """
