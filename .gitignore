@@ -7,7 +7,7 @@ __pycache__
 /*.sql
 /__data
 .DS_Store
-docker-compose.yaml
+/docker-compose.yaml
 /uploads
 /static/uploads
 cookies.txt
