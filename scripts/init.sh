@@ -58,4 +58,3 @@ echo SUCC
 if [ ! -d venv ]; then
   python3.8 -m venv venv
 fi
-cp
