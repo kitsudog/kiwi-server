@@ -29,7 +29,7 @@ if [ ! -e alembic.ini ]; then
   cp "${BASE_DIR}/alembic.ini" .
 fi
 if [ ! -e config.py ]; then
-  cp "${BASE_DIR}/config.py" .
+  cp "${BASE_DIR}/config.py.sample" config.py
 fi
 
 if [ ! -d migrations ]; then
