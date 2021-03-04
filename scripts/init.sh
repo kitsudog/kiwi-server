@@ -11,13 +11,9 @@ BASE_DIR=project/kiwi_server
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/app.py"
 # shellcheck disable=SC2226
-ln -sF "${BASE_DIR}/alembic.ini"
-# shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/.dockerignore"
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/.gitignore"
-# shellcheck disable=SC2226
-ln -sF "${BASE_DIR}/config.py"
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/Dockerfile"
 # shellcheck disable=SC2226
@@ -28,6 +24,12 @@ ln -sF "${BASE_DIR}/base"
 ln -sF "${BASE_DIR}/frameworks"
 if [ ! -e requirements.txt ]; then
   cp "${BASE_DIR}/requirements.txt" .
+fi
+if [ ! -e alembic.ini ]; then
+  cp "${BASE_DIR}/alembic.ini" .
+fi
+if [ ! -e config.py ]; then
+  cp "${BASE_DIR}/config.py" .
 fi
 
 if [ ! -d migrations ]; then
