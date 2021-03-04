@@ -36,7 +36,7 @@ def db_redis(index) -> Redis:
         port = int(port.split(":")[-1])
     password = os.environ.get("REDIS_AUTH", None)
     if not host or not port:
-        Log(f"redis配置错误[{redis}:{port}]")
+        Log(f"redis配置错误[{host}:{port}]")
         exit(1)
     db = redis.StrictRedis(host=host, port=port, decode_responses=True, db=index, password=password)
     # PATCH: 部分云的redis不支持select
@@ -332,16 +332,18 @@ def __check_redis_conn(connection: Connection):
         return False
 
 
+# noinspection PyShadowingNames
 class Subscribe:
     sleep_time = [1000, 1000, 1000, 3000, 3000, 3000, 5000, 10000, 30000, 60000]
     sleep_time_len = len(sleep_time) - 1
 
-    def __init__(self, channel: str, queue: Queue):
+    def __init__(self, channel: str, queue: Queue, redis: Redis):
         self.channel = channel
         self.queue = queue
         self.thread = None
         self.sleep_expire = 0
         self.fail_count = 0
+        self.redis = redis
 
     def run(self):
         if self.thread:
@@ -354,7 +356,7 @@ class Subscribe:
             time.sleep(sleep_time / 1000)
         try:
             Log(f"开始监听[{self.channel}][{self.fail_count}]")
-            topic = db_mgr.pubsub()
+            topic = self.redis.pubsub()
             topic.subscribe(self.channel)
             self.sleep_expire = 0
             self.fail_count = 0
@@ -390,13 +392,14 @@ __topic_pool: Dict[str, Subscribe] = {
 __channel_message_pool: DefaultDict[str, Queue] = defaultdict(lambda: Queue())
 
 
-def message_from_channel(channel: str, is_json=False, limit=10):
+# noinspection PyShadowingNames
+def message_from_channel(channel: str, is_json=False, limit=10, redis: Redis = db_mgr):
     if subscribe := __topic_pool.get(channel):
         if not subscribe.thread:
             subscribe.run()
     else:
         # todo: 确定gevent是否启动
-        __topic_pool[channel] = subscribe = Subscribe(channel, __channel_message_pool[channel])
+        __topic_pool[channel] = subscribe = Subscribe(channel, __channel_message_pool[channel], redis=redis)
         subscribe.run()
     queue = subscribe.queue
     for _ in range(queue.qsize()):

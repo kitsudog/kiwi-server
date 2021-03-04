@@ -26,6 +26,13 @@ ln -sF "${BASE_DIR}/migrate.py"
 ln -sF "${BASE_DIR}/base"
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/frameworks"
+if [ ! -e requirements.txt ]; then
+  cp "${BASE_DIR}/requirements.txt" .
+fi
+
+if [ ! -d migrations ]; then
+  cp -r "${BASE_DIR}/migrations" .
+fi
 
 mkdir -p modules
 if [ ! -x modules/__init__.py ]; then
@@ -47,3 +54,8 @@ cat <<EOF >conf/module.conf
 }
 EOF
 echo SUCC
+
+if [ ! -d venv ]; then
+  python3.8 -m venv venv
+fi
+cp
