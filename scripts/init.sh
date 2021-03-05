@@ -12,8 +12,9 @@ BASE_DIR=project/kiwi_server
 ln -sF "${BASE_DIR}/app.py"
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/.dockerignore"
-# shellcheck disable=SC2226
-ln -sF "${BASE_DIR}/.gitignore"
+if [ ! -e .gitignore ]; then
+  cp "${BASE_DIR}/.gitignore" .
+fi
 # shellcheck disable=SC2226
 ln -sF "${BASE_DIR}/Dockerfile"
 # shellcheck disable=SC2226
@@ -50,11 +51,20 @@ done
 MODULES=$(find -L modules -iname main.py -d 2 | cut -d/ -f2 | sort)
 
 mkdir -p conf
-cat <<EOF >conf/module.conf
-{
-    "main":$(echo "$MODULES" | python -c"import sys,json;print(json.dumps(sys.stdin.read().splitlines()))"),
-}
-EOF
+python -c "
+import json
+import os
+if os.path.exists('conf/module.conf'):
+  with open('conf/module.conf') as fin:
+    obj = json.loads(fin.read())
+else:
+  obj = {}
+obj.update({
+  'main': '''$MODULES'''.splitlines(),
+})
+with open('conf/module.conf', mode='w') as fout:
+  fout.write(json.dumps(obj, indent=4))
+"
 echo SUCC
 
 if [ ! -d venv ]; then

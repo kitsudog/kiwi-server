@@ -1,7 +1,8 @@
-/.git
+.git
 /venv
 /logs
 /__data
 /docker-compose.yaml
 /compose-*.yaml
 /main.sql
+/docker
