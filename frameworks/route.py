@@ -1,12 +1,43 @@
 # -*- coding:utf-8 -*-
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, List
 
-from base.style import Fail, Log
+import requests
+from base.interface import IMinService
+from base.style import Fail, Log, Assert, str_json
+from frameworks.actions import FastAction
 from frameworks.base import Response, Request, ServerError
+from frameworks.redis_mongo import db_config
 from frameworks.server_context import RouterContext
 
 
-class Router(object):
+class HTTPRequestHandler:
+    def __init__(self, module: str, cmd: str, url: str):
+        Assert(url.endswith("/"))
+        self.module = module
+        self.cmd = cmd
+        self.url = url
+        self.__name__ = f"{module}:{cmd}"
+
+    def __call__(self, request: Request):
+        params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
+        rsp = requests.post(f"{self.url}{self.cmd}", json=params, headers={
+            "d-token": request.session.get_token(),
+        })
+        if rsp.status_code != 200:
+            pass
+        else:
+            return rsp.json()
+
+
+class Router(IMinService):
+
+    def cycle_min(self):
+        # todo: 激活当前的接口
+        # 加载远端的接口
+        for module, config in db_config.hgetall("module").items():
+            config = str_json(config)
+            self.reg_remote_http_handler(module, config["url"], config["cmd"])
+
     context = RouterContext()
 
     GET_HANDLER = {
@@ -18,7 +49,19 @@ class Router(object):
         self.forward_map = {}  # type:Dict[str:Callable[[Request], Response]]
         self.router_rule = []
 
+    def reg_remote_http_handler(self, module: str, url: str, cmd: List[str]):
+        """
+        远端的handler
+        """
+        for each in cmd:
+            action = FastAction(HTTPRequestHandler(module, each, url))
+            action.module = f"{module}@{url}"
+            self.router_map[each] = action
+
     def reg_handler(self, cmd: str, handler, overwrite=False, ignore_exist=False):
+        """
+        注册一个本地的handler
+        """
         if cmd in self.router_map:
             if self.router_map[cmd] == handler:
                 return
@@ -46,6 +89,9 @@ class Router(object):
         return handler
 
     def find(self, cmd: str, fail=True) -> Optional[Callable[[Request], Response]]:
+        """
+        获取handler
+        """
         for each in self.router_rule:
             handler = each(cmd)
             if handler is not None:

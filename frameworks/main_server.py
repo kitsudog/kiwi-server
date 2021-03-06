@@ -177,7 +177,7 @@ class UUIDNodeInjector(Action.Injector):
 
     def from_str_value(self, value: str):
         hint: UUIDNode = self.type_hint
-        ret = hint.by_uuid(value, fail=False)
+        ret = hint.by_uuid_allow_none(value)
         FBCode.CODE_UUID参数不正确(ret, param_func=lambda: {
             "uuid": value,
             "param": self.alias,
@@ -577,7 +577,11 @@ def service_cycle():
     _now = now()
     cost_map = {}
     last = _now
+    # todo: 理论上应该是并发更合适
     for service in Server.service_list:
+        if getattr(service, "__IService_expire", 0) > _now:
+            # 时候没到
+            continue
         try:
             service.cycle(_now)
         except Exception as e:

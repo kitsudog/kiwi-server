@@ -7,18 +7,17 @@ import json
 import os
 import re
 import time
-from collections import ChainMap, defaultdict
+from collections import ChainMap
 from math import ceil
-from queue import Queue
-from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, DefaultDict
+from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict
 
 import gevent
 import pymongo
-import redis
-from redis import Connection
+from gevent.event import AsyncResult
+from redis import Connection, RedisError
 from redis.client import Redis
 
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -28,6 +27,7 @@ pool_map = {
 # todo: 支持定制
 # noinspection PyBroadException
 def db_redis(index) -> Redis:
+    import redis
     host = os.environ.get("REDIS_HOST", "127.0.0.1")
     port = os.environ.get("REDIS_PORT", "6379")
     if port and re.compile(r"\d+").fullmatch(port):
@@ -53,6 +53,7 @@ def db_redis(index) -> Redis:
 
 
 def session_redis(index):
+    import redis
     """
     暂时留用的
     """
@@ -75,7 +76,7 @@ def _mongo(cate):
     auth = os.environ.get("MONGO_AUTH", "")
     name = os.environ.get("MONGO_NAME", "model")
     if not host or not port:
-        Log(f"mongo配置错误[{redis}:{port}]")
+        Log(f"mongo配置错误[{host}:{port}]")
         exit(1)
     if len(auth):
         auth = "%s@" % auth
@@ -243,6 +244,7 @@ def mongo_get(key: str, *, model=None, active=True, no_sentry=False) -> Optional
             return mongo(model).find_one({"_id": _id})
 
 
+# noinspection SpellCheckingInspection
 def mongo_mget(key_list: Sequence[str], model: Optional[str] = None, active=True, allow_not_found=True):
     ret = []
     size = len(key_list)
@@ -268,7 +270,7 @@ class DailyRedis:
         return time.strftime("%Y-%m-%d", time.localtime())
 
     def incr(self, name, *, amount=1):
-        return self.__db.incr(f"{self._prefix()}|{name}", amount=1)
+        return self.__db.incr(f"{self._prefix()}|{name}", amount=amount)
 
     def exists(self, *names):
         prefix = self._prefix()
@@ -293,6 +295,48 @@ class DailyRedis:
     # noinspection SpellCheckingInspection
     def hset(self, name, key=None, value=None, mapping=None):
         return self.__db.hset(f"{self._prefix()}|{name}", key, value=value, mapping=mapping)
+
+    def lindex(self, name, index):
+        return self.__db.lindex(f"{self._prefix()}|list|{name}", index)
+
+    def linsert(self, name, where, refvalue, value):
+        return self.__db.linsert(f"{self._prefix()}|list|{name}", where, refvalue, value)
+
+    def llen(self, name):
+        return self.__db.llen(f"{self._prefix()}|list|{name}")
+
+    def lpop(self, name):
+        return self.__db.lpop(f"{self._prefix()}|list|{name}")
+
+    def lpush(self, name, *values):
+        return self.__db.lpush(f"{self._prefix()}|list|{name}", *values)
+
+    def lpushx(self, name, value):
+        return self.__db.lpushx(f"{self._prefix()}|list|{name}", value)
+
+    def lrange(self, name, start, end):
+        return self.__db.lrange(f"{self._prefix()}|list|{name}", start, end)
+
+    def lrem(self, name, count, value):
+        return self.__db.lrem(f"{self._prefix()}|list|{name}", count, value)
+
+    def lset(self, name, index, value):
+        return self.__db.lset(f"{self._prefix()}|list|{name}", index, value)
+
+    def ltrim(self, name, start, end):
+        return self.__db.ltrim(f"{self._prefix()}|list|{name}", start, end)
+
+    def rpop(self, name):
+        return self.__db.rpop(f"{self._prefix()}|list|{name}")
+
+    def rpoplpush(self, src, dst):
+        return self.__db.rpoplpush(f"{self._prefix()}|list|{src}", f"{self._prefix()}|list|{dst}")
+
+    def rpush(self, name, *values):
+        return self.__db.rpush(f"{self._prefix()}|list|{name}", *values)
+
+    def rpushx(self, name, value):
+        return self.__db.rpushx(f"{self._prefix()}|list|{name}", value)
 
 
 # noinspection PyMethodMayBeStatic
@@ -334,16 +378,19 @@ def __check_redis_conn(connection: Connection):
 
 # noinspection PyShadowingNames
 class Subscribe:
+    """
+    负责无条件的接受redis的订阅消息而已
+    """
     sleep_time = [1000, 1000, 1000, 3000, 3000, 3000, 5000, 10000, 30000, 60000]
     sleep_time_len = len(sleep_time) - 1
 
-    def __init__(self, channel: str, queue: Queue, redis: Redis):
+    def __init__(self, channel: str, redis: Redis):
         self.channel = channel
-        self.queue = queue
         self.thread = None
         self.sleep_expire = 0
         self.fail_count = 0
         self.redis = redis
+        self.event = AsyncResult()
 
     def run(self):
         if self.thread:
@@ -363,22 +410,25 @@ class Subscribe:
             while True:
                 msg = topic.parse_response(block=True)
                 if msg[0] == "message":
-                    self.queue.put_nowait({
-                        "type": msg[0],
-                        "channel": msg[1],
-                        "data": msg[2]
-                    })
+                    self.event.set(msg[2])
+                    # self.queue.put_nowait({
+                    #     "type": msg[0],
+                    #     "channel": msg[1],
+                    #     "data": msg[2]
+                    # })
                 elif msg[0] == "pmessage":
-                    self.queue.put_nowait({
-                        "type": msg[0],
-                        'pattern': msg[1],
-                        "channel": msg[2],
-                        "data": msg[3]
-                    })
-                if self.queue.qsize() > 10000:
-                    # 自己吞掉开头的
-                    self.queue.get()
-        except redis.exceptions.RedisError as e:
+                    # self.queue.put_nowait({
+                    #     "type": msg[0],
+                    #     'pattern': msg[1],
+                    #     "channel": msg[2],
+                    #     "data": msg[3]
+                    # })
+                    self.event.set(msg[3])
+                # if self.queue.qsize() > 10000:
+                #     # 自己吞掉开头的
+                #     self.queue.get()
+                pass
+        except RedisError as e:
             self.fail_count += 1
             sleep_time = Subscribe.sleep_time[min(Subscribe.sleep_time_len, self.fail_count)]
             self.sleep_expire = now() + sleep_time
@@ -389,28 +439,75 @@ class Subscribe:
 __topic_pool: Dict[str, Subscribe] = {
 
 }
-__channel_message_pool: DefaultDict[str, Queue] = defaultdict(lambda: Queue())
 
 
-# noinspection PyShadowingNames
-def message_from_channel(channel: str, is_json=False, limit=10, redis: Redis = db_mgr):
-    if subscribe := __topic_pool.get(channel):
-        if not subscribe.thread:
-            subscribe.run()
-    else:
-        # todo: 确定gevent是否启动
-        __topic_pool[channel] = subscribe = Subscribe(channel, __channel_message_pool[channel], redis=redis)
-        subscribe.run()
-    queue = subscribe.queue
-    for _ in range(queue.qsize()):
-        if limit == 0:
-            break
-        limit -= 1
-        msg = queue.get(block=False)
-        if is_json:
-            yield json.loads(msg["data"])
+class MessageChannel:
+    class MessageData(TypedDict):
+        id: int
+        ts: int
+        data: str
+
+    def __init__(self, channel: str, cursor: int = -1, redis: Redis = db_mgr, buffer_length=1000):
+        self.channel = channel
+        self.redis = redis
+        self.buffer_length = buffer_length
+        self.key = f"channel:content:{channel}"
+        self.counter_key = f"channel:counter:current:{channel}"
+        self.counter_start_key = f"channel:counter:start:{channel}"
+        # 默认最新的
+        self.cursor = int(self.redis.get(self.counter_key) or '0') if cursor < 0 else cursor
+        global __topic_pool
+        if subscribe := __topic_pool.get(channel):
+            if not subscribe.thread:
+                subscribe.run()
         else:
-            yield msg["data"]
+            # todo: 确定gevent是否启动
+            __topic_pool[channel] = subscribe = Subscribe(channel, redis=redis)
+            subscribe.run()
+        self.event = subscribe.event
+
+    def publish_by_channel(self, raw: str):
+        """
+        额外增加一个redis的hash结构负责存储channel的信息
+        """
+        counter = self.redis.incrby(self.counter_key, amount=1)
+        data = MessageChannel.MessageData(id=counter, ts=now(), data=raw)
+        Assert(
+            self.redis.hsetnx(self.key, counter, json_str(data)),
+            "channel写入错误"
+        )
+        if counter % 100 == 0:
+            length = self.redis.llen(self.key)
+            if length > self.buffer_length:
+                with Block("删除掉一部分旧的", fail=False):
+                    key_list = sorted(list(map(int, self.redis.hkeys(self.key))))
+                    new_start = len(key_list) - self.buffer_length
+                    Log(f"[channel={self.channel}]清理[start={new_start}]")
+                    self.redis.hdel(self.key, key_list[:new_start])
+                    self.redis.set(self.counter_start_key, new_start)
+        self.redis.publish(self.channel, data)
+
+    def fetch_message(self, timeout_sec=30) -> Optional[MessageData]:
+        """
+        负责获取下一条
+        """
+        try:
+            if ret := self.redis.hget(self.key, self.cursor) or self.event.get(block=True, timeout=timeout_sec):
+                data: MessageChannel.MessageData = str_json(ret)
+                self.cursor = data["id"] + 1
+                return data
+        except gevent.event.Timeout:
+            return None
+
+    def fetch_message_nowait(self) -> Optional[MessageData]:
+        """
+        负责获取一条最新的
+        """
+        if ret := self.redis.hget(self.key, self.cursor):
+            data: MessageChannel.MessageData = str_json(ret)
+            self.cursor = data["id"] + 1
+            return data
+        return None
 
 
 def model_id_list_push(key, model, head=False, max_length=100):

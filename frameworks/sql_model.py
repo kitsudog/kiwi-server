@@ -5,16 +5,17 @@ import re
 import threading
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, Type, Iterable, List
+from typing import Dict, Type, Iterable, List, Optional
 from uuid import uuid4
 
-import config
-from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, DateTime, Column, String, BIGINT, JSON
 from sqlalchemy.orm import Session, sessionmaker, Query, scoped_session
 from sqlalchemy.orm.attributes import InstrumentedAttribute, flag_modified
 from sqlalchemy.pool import QueuePool
+
+import config
+from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 
 db = SQLAlchemy()
 
@@ -288,6 +289,7 @@ class UUIDNode(SQLModel):
     @classmethod
     def new_node(cls: Type[T], uuid: str) -> T:
         Assert(not re.findall(r"[a-z]", uuid), "node的UUID请使用大写")
+        Log(f"构造node[{cls.__name__}:{uuid}]")
         obj: UUIDNode = cls()
         obj.uuid = uuid
         cls.new_one_init(obj)
@@ -295,12 +297,17 @@ class UUIDNode(SQLModel):
         return obj
 
     @classmethod
-    def by_uuid(cls: Type[T], uuid: str, fail=True) -> T:
+    def by_uuid(cls: Type[T], uuid: str) -> T:
         if ret := cls.filter(cls.uuid == uuid).first():
             return ret
         else:
-            if fail:
-                raise Fail(f"找不到指定的model[{cls.__name__}:{uuid}]")
+            return cls.new_node(uuid)
+
+    @classmethod
+    def by_uuid_allow_none(cls: Type[T], uuid: str) -> Optional[T]:
+        if ret := cls.filter(cls.uuid == uuid).first():
+            return ret
+        else:
             return None
 
     @classmethod

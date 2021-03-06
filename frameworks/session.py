@@ -216,6 +216,6 @@ class RedisSessionMgr(_SessionMgr):
                 self.__pool.put(Server.session_cls())
 
 
-SessionMgr = RedisSessionMgr()
+SessionMgr: RedisSessionMgr = RedisSessionMgr()
 Server.add_service(SessionMgr)
 # SessionMgr = CacheSessionMgr()

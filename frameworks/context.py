@@ -6,3 +6,5 @@ from frameworks.server_context import ServerContext
 Server = ServerContext()
 
 DefaultRouter = Router()
+
+Server.add_service(DefaultRouter)
