@@ -482,7 +482,7 @@ class MessageChannel:
             "channel写入错误"
         )
         if counter % 100 == 0:
-            length = self.redis.llen(self.key)
+            length = self.redis.hlen(self.key)
             if length > self.buffer_length:
                 with Block("删除掉一部分旧的", fail=False):
                     key_list = sorted(list(map(int, self.redis.hkeys(self.key))))
