@@ -13,11 +13,10 @@ from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, Ty
 
 import gevent
 import pymongo
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
-
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -436,7 +435,7 @@ class Subscribe:
         self.thread = None
 
 
-__topic_pool: Dict[str, Subscribe] = {
+_topic_pool: Dict[str, Subscribe] = {
 
 }
 
@@ -456,13 +455,12 @@ class MessageChannel:
         self.counter_start_key = f"channel:counter:start:{channel}"
         # 默认最新的
         self.cursor = int(self.redis.get(self.counter_key) or '0') if cursor < 0 else cursor
-        global __topic_pool
-        if subscribe := __topic_pool.get(channel):
+        if subscribe := _topic_pool.get(channel):
             if not subscribe.thread:
                 subscribe.run()
         else:
             # todo: 确定gevent是否启动
-            __topic_pool[channel] = subscribe = Subscribe(channel, redis=redis)
+            _topic_pool[channel] = subscribe = Subscribe(channel, redis=redis)
             subscribe.run()
         self.event = subscribe.event
 
