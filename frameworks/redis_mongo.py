@@ -13,10 +13,11 @@ from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, Ty
 
 import gevent
 import pymongo
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
+
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -483,7 +484,7 @@ class MessageChannel:
                     Log(f"[channel={self.channel}]清理[start={new_start}]")
                     self.redis.hdel(self.key, key_list[:new_start])
                     self.redis.set(self.counter_start_key, new_start)
-        self.redis.publish(self.channel, data)
+        self.redis.publish(self.channel, json_str(data))
 
     def fetch_message(self, timeout_sec=30) -> Optional[MessageData]:
         """
