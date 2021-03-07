@@ -10,4 +10,5 @@ __pycache__
 /docker-compose.yaml
 /uploads
 /static/uploads
-cookies.txt
+/cookies.txt
+/config.py
