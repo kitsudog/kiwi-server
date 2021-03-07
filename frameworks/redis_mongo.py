@@ -488,7 +488,7 @@ class MessageChannel:
                     key_list = sorted(list(map(int, self.redis.hkeys(self.key))))
                     new_start = len(key_list) - self.buffer_length
                     Log(f"[channel={self.channel}]清理[start={new_start}]")
-                    self.redis.hdel(self.key, key_list[:new_start])
+                    self.redis.hdel(self.key, *key_list[:new_start])
                     self.redis.set(self.counter_start_key, new_start)
         self.redis.publish(self.channel, json_str(data))
 
