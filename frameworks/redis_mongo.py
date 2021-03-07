@@ -13,10 +13,11 @@ from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, Ty
 
 import gevent
 import pymongo
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
+
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -410,6 +411,7 @@ class Subscribe:
                 msg = topic.parse_response(block=True)
                 if msg[0] == "message":
                     self.event.set(msg[2])
+                    self.event = AsyncResult()
                     # self.queue.put_nowait({
                     #     "type": msg[0],
                     #     "channel": msg[1],
@@ -423,6 +425,7 @@ class Subscribe:
                     #     "data": msg[3]
                     # })
                     self.event.set(msg[3])
+                    self.event = AsyncResult()
                 # if self.queue.qsize() > 10000:
                 #     # 自己吞掉开头的
                 #     self.queue.get()
@@ -462,7 +465,11 @@ class MessageChannel:
             # todo: 确定gevent是否启动
             _topic_pool[channel] = subscribe = Subscribe(channel, redis=redis)
             subscribe.run()
-        self.event = subscribe.event
+        self.subscribe = subscribe
+
+    @property
+    def event(self):
+        return self.subscribe.event
 
     def publish_by_channel(self, raw: str):
         """
