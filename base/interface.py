@@ -17,6 +17,12 @@ class ITick(object):
         pass
 
 
+class ITask(object):
+    @abstractmethod
+    def run(self):
+        pass
+
+
 class ISecService(IService):
     def cycle(self, _now):
         if getattr(self, "__IService_expire", 0) > _now:

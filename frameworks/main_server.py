@@ -499,8 +499,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         return [b'500']
 
 
-def forward(session: SessionContext, cmd: str, param: Dict, ok_only=True) -> Tuple[int, Dict]:
+def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=True) -> Tuple[int, Dict]:
     # todo: 应该全异步操作避免`request`的`thread_local`污染
+    if session is None:
+        session = SessionMgr.guest_session()
     request = Request(session, cmd, param)
     SessionMgr.action_start(session, request)
     response = DefaultRouter.do(request)

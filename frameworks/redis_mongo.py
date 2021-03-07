@@ -13,11 +13,10 @@ from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, Ty
 
 import gevent
 import pymongo
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
-
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -486,17 +485,30 @@ class MessageChannel:
                     self.redis.set(self.counter_start_key, new_start)
         self.redis.publish(self.channel, json_str(data))
 
+    # noinspection PyBroadException,PyTypeChecker
     def fetch_message(self, timeout_sec=30) -> Optional[MessageData]:
         """
         负责获取下一条
         """
+        data = None
         try:
-            if ret := self.redis.hget(self.key, self.cursor) or self.event.get(block=True, timeout=timeout_sec):
+            if ret := self.redis.hget(self.key, self.cursor):
                 data: MessageChannel.MessageData = str_json(ret)
                 self.cursor = data["id"] + 1
                 return data
-        except gevent.event.Timeout:
+            else:
+                ret = self.event.get(block=True, timeout=timeout_sec)
+                data: MessageChannel.MessageData = str_json(ret)
+                self.cursor = data["id"] + 1
+                return data
+        except Exception as e:
+            Log(f"channel[{self.channel}:{self.cursor}] no message[{e}]")
             return None
+        finally:
+            # PATCH: except可能会出错捕捉不到
+            if data is None:
+                Log(f"channel[{self.channel}:{self.cursor}] no message")
+            return data
 
     def fetch_message_nowait(self) -> Optional[MessageData]:
         """
