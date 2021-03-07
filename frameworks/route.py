@@ -2,6 +2,7 @@
 from typing import Callable, Dict, Optional, List
 
 import requests
+
 from base.interface import IMinService
 from base.style import Fail, Log, Assert, str_json
 from frameworks.actions import FastAction
@@ -26,7 +27,18 @@ class HTTPRequestHandler:
         if rsp.status_code != 200:
             pass
         else:
-            return rsp.json()
+            result = rsp.json()
+            if result.get("ret") == 0:
+                return Response(result["ret"], result["result"], result["cmd"])
+            else:
+                ret = Response(result.get("ret", -1), {}, cmd=self.cmd)
+                ret.error = result.get("error", "服务器异常")
+                return ret
+
+
+class ForwardAction(FastAction):
+    def wrapper(self, request: Request, *args, **kwargs):
+        return self.func(request)
 
 
 class Router(IMinService):
@@ -54,7 +66,7 @@ class Router(IMinService):
         远端的handler
         """
         for each in cmd:
-            action = FastAction(HTTPRequestHandler(module, each, url))
+            action = ForwardAction(HTTPRequestHandler(module, each, url))
             action.module = f"{module}@{url}"
             self.router_map[each] = action
 
