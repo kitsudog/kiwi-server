@@ -867,12 +867,15 @@ def date_str12(ts: Optional[int] = None, /) -> str:
 
 
 def str12_date(src: str):
+    """
+    202011040738
+    """
     return int(datetime.datetime.strptime(src, "%Y%m%d%H%M").timestamp() * 1000)
 
 
 def date_str14(ts: Optional[int] = None, /) -> str:
     """
-    202011040738
+    20210308032326
     """
     if ts is None:
         ts = now()
@@ -880,6 +883,9 @@ def date_str14(ts: Optional[int] = None, /) -> str:
 
 
 def str14_date(src: str):
+    """
+    20210308032326
+    """
     return int(datetime.datetime.strptime(src, "%Y%m%d%H%M%S").timestamp() * 1000)
 
 

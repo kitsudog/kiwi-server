@@ -2,7 +2,6 @@
 from typing import Callable, Dict, Optional, List
 
 import requests
-
 from base.interface import IMinService
 from base.style import Fail, Log, Assert, str_json
 from frameworks.actions import FastAction
@@ -21,6 +20,7 @@ class HTTPRequestHandler:
 
     def __call__(self, request: Request):
         params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
+        Log(f"forward[{self.url}{self.cmd}]")
         rsp = requests.post(f"{self.url}{self.cmd}", json=params, headers={
             "d-token": request.session.get_token(),
         })
@@ -43,12 +43,15 @@ class ForwardAction(FastAction):
 
 class Router(IMinService):
 
-    def cycle_min(self):
-        # todo: 激活当前的接口
+    def update_remote_module(self):
         # 加载远端的接口
         for module, config in db_config.hgetall("module").items():
             config = str_json(config)
             self.reg_remote_http_handler(module, config["url"], config["cmd"])
+
+    def cycle_min(self):
+        # todo: 激活当前的接口
+        self.update_remote_module()
 
     context = RouterContext()
 
@@ -83,7 +86,11 @@ class Router(IMinService):
             if overwrite:
                 pass
             else:
-                raise Fail(f"重复注册route[{cmd}]")
+                if isinstance(self.router_map[cmd], ForwardAction):
+                    Log(f"已经存在远程action[{cmd}][{self.router_map[cmd]}]跳过[{handler}]")
+                    return
+                else:
+                    raise Fail(f"重复注册route[{cmd}]")
         self.router_map[cmd] = handler
         self.forward_map[cmd] = handler
 

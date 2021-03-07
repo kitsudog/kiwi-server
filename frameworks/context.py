@@ -8,3 +8,4 @@ Server = ServerContext()
 DefaultRouter = Router()
 
 Server.add_service(DefaultRouter)
+DefaultRouter.update_remote_module()
