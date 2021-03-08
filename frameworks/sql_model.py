@@ -176,6 +176,11 @@ class SQLModel(db.Model):
         return _session.query(cls).filter(*args).first()
 
     @classmethod
+    def refresh_sql_session(cls: Type[T], obj: T):
+        _session = _sql_session(cls.__bind_key__)
+        _session.refresh(obj)
+
+    @classmethod
     def sql_session(cls) -> Session:
         _session = _sql_session(cls.__bind_key__)
         return _session
