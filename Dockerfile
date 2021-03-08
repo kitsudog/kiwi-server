@@ -1,4 +1,5 @@
 FROM python:3.8
+ARG GIT_TAG=no-tag
 WORKDIR /app/server
 COPY requirements.txt /app/server/requirements.txt
 # export ARCHFLAGS="-arch x86_64"
@@ -16,5 +17,4 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server
-ARG GIT_TAG=no-tag
 ENTRYPOINT sh -c "python migrate.py && python app.py --tag=$GIT_TAG"
