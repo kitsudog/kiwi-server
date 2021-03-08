@@ -457,7 +457,12 @@ class MessageChannel:
         self.counter_key = f"channel:counter:current:{channel}"
         self.counter_start_key = f"channel:counter:start:{channel}"
         # 默认最新的
-        self.cursor = int(self.redis.get(self.counter_key) or '0') if cursor < 0 else cursor
+        if cursor < 0:
+            self.cursor = int(self.redis.get(self.counter_key) or '0')
+        else:
+            self.min_cursor = int(self.redis.get(self.counter_start_key) or '1')
+            if self.cursor < self.min_cursor:
+                self.cursor = self.min_cursor
         if subscribe := _topic_pool.get(channel):
             if not subscribe.thread:
                 subscribe.run()
@@ -503,11 +508,10 @@ class MessageChannel:
                 data: MessageChannel.MessageData = str_json(ret)
                 self.cursor = data["id"] + 1
                 return data
-            else:
-                ret = self.event.get(block=True, timeout=timeout_sec)
-                data: MessageChannel.MessageData = str_json(ret)
-                self.cursor = data["id"] + 1
-                return data
+            ret = self.event.get(block=True, timeout=timeout_sec)
+            data: MessageChannel.MessageData = str_json(ret)
+            self.cursor = data["id"] + 1
+            return data
         except Exception as e:
             Log(f"channel[{self.channel}:{self.cursor}] no message[{e}]")
             return None
