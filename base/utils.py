@@ -91,7 +91,10 @@ def base32(_bytes: bytes) -> str:
 
 def base64decode(src: str) -> bytes:
     import base64
-    return base64.b64decode(src)
+    if missing_padding := 4 - len(src) % 4:
+        return base64.b64decode(src + "=" * missing_padding)
+    else:
+        return base64.b64decode(src)
 
 
 def base32decode(src: str) -> bytes:

@@ -399,7 +399,6 @@ class BaseInfo(BaseSaveModel, ABC):
 
     def __init__(self):
         super().__init__()
-        self.set_id(_fetch_id(self.__class__))
 
     @classmethod
     def by_str_id(cls: Generic[T], _id: str, auto_new=False, fail=True) -> T:
@@ -409,18 +408,23 @@ class BaseInfo(BaseSaveModel, ABC):
     def by_id(cls: Type[T], _id: int, auto_new=False, fail=True) -> Optional[T]:
         _json = db_get_json(cls.__name__ + ":" + str(_id), fail=False, model=cls.__name__)
         if _json is None:
-            if auto_new:
-                (ret := cls()).set_id(_id)
-            else:
-                if fail:
-                    if isinstance(fail, str):
-                        raise Fail(fail)
-                    else:
-                        raise Fail("找不到指定的对象[%s][%s]" % (cls.__name__, _id))
-                ret = None
+            Assert(auto_new is False, "info不支持auto_new")
+            if fail:
+                if isinstance(fail, str):
+                    raise Fail(fail)
+                else:
+                    raise Fail("找不到指定的对象[%s][%s]" % (cls.__name__, _id))
+            ret = None
         else:
             (ret := cls()).from_json(_json)
         return ret
+
+    @classmethod
+    def new_one(cls):
+        info = cls()
+        info.set_id(_fetch_id(cls))
+        info.save()
+        return info
 
 
 class BaseDetail(BaseModel):
@@ -557,8 +561,8 @@ class SimpleDef(BaseDef, ABC):
             self.__orig_setter__(f"__{each}", value)
 
 
+# noinspection DuplicatedCode
 class SimpleNode(BaseNode):
-    # noinspection DuplicatedCode
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         fields = []
@@ -570,8 +574,50 @@ class SimpleNode(BaseNode):
         # cls.__orig_getter__ = cls.__getattribute__
         if diff_set := set(getattr(cls, "__annotations__", [])) - set(fields):
             if is_debug():
-                raise Fail(f"检查[{cls.__name__}][{','.join(diff_set)}]")
+                raise Fail(f"检查[{cls.__name__}][{','.join(diff_set)}]是否写默认值")
         # cls.__getattribute__ = _getter(cls.__getattribute__, fields)
+        cls.__fields__ = fields
+        cls.__fields_init__ = []
+        for each in fields:
+            orig = getattr(cls, each)
+            cls.__fields_init__.append(clone_generator(orig))
+            setattr(cls, f"__{each}", orig)
+            # 剔除旧的避免不必要的问题
+            delattr(cls, each)
+
+    def __init__(self):
+        super().__init__()
+        # noinspection PyUnresolvedReferences
+        for k, v in zip(self.__class__.__fields__, self.__class__.__fields_init__):
+            setattr(self, k, v())
+
+    # noinspection PyArgumentList
+    def _to_json(self, _json_data: Dict):
+        for each in self.__fields__:
+            # _json_data[each] = self.__orig_getter__(f"__{each}")
+            _json_data[each] = getattr(self, each)
+
+    # noinspection PyArgumentList
+    def _from_json(self, _json_data: Dict):
+        for each in self.__fields__:
+            if each in _json_data:
+                # self.__orig_setter__(f"__{each}", _json_data[each])
+                setattr(self, each, _json_data[each])
+
+
+# noinspection DuplicatedCode
+class SimpleInfo(BaseInfo):
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        fields = []
+        for k, v in cls.__dict__.items():
+            if isinstance(k, str) and not k.startswith("_"):
+                if callable(getattr(cls, k)):
+                    continue
+                fields.append(k)
+        if diff_set := set(getattr(cls, "__annotations__", [])) - set(fields):
+            if is_debug():
+                raise Fail(f"检查[{cls.__name__}][{','.join(diff_set)}]是否写默认值")
         cls.__fields__ = fields
         cls.__fields_init__ = []
         for each in fields:
