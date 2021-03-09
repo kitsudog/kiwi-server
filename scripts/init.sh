@@ -51,12 +51,12 @@ done
 MODULES=$(find -L modules -iname main.py -d 2 | cut -d/ -f2 | sort)
 
 mkdir -p conf
-python -c "
+python3.8 -c "
 import json
 import os
 if os.path.exists('conf/module.conf'):
   with open('conf/module.conf') as fin:
-    obj = json.loads(fin.read())
+    obj = eval(fin.read())
 else:
   obj = {}
 obj.update({
