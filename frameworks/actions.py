@@ -414,7 +414,7 @@ class Action(FastAction):
                 "value": value,
             })
 
-    class EnumIntInjector(Injector):
+    class EnumIntInjector(IntInjector):
         def __init__(self, *args, **kwargs):
             self.value_set = None
             super().__init__(*args, **kwargs)
@@ -430,6 +430,10 @@ class Action(FastAction):
 
         def verify_value(self, value):
             Assert(value in self.value_set, f"[{value}]枚举的值必须在范围[{self.value_set}]内")
+
+        def from_str_value(self, value: str):
+            value: int = super().from_str_value(value)
+            return self.from_value(value)
 
         def from_value(self, value):
             if value in self.value_set:
