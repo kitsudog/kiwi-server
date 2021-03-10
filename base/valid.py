@@ -24,6 +24,13 @@ ExprInt2 = re.compile(r'(-?\d+)(:-?\d+)?')
 ExprNumber = re.compile(r'(-?\d+)(\.\d+)?')
 ExprSplit = re.compile(r"[,|#;]")
 
+RangeWeek = set(range(1, 8))
+RangeMonth = set(range(1, 13))
+RangeHour = set(range(24))
+RangeMinute = set(range(60))
+RangeSecond = set(range(60))
+RangeDay = set(range(366))
+
 
 def JsonDict(src) -> Dict:
     if type(src) in {str}:

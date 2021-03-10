@@ -8,14 +8,13 @@ from functools import partial
 from typing import Dict, Type, Iterable, List, Optional
 from uuid import uuid4
 
+import config
+from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, DateTime, Column, String, BIGINT, JSON
 from sqlalchemy.orm import Session, sessionmaker, Query, scoped_session
 from sqlalchemy.orm.attributes import InstrumentedAttribute, flag_modified
 from sqlalchemy.pool import QueuePool
-
-import config
-from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 
 db = SQLAlchemy()
 
@@ -109,7 +108,7 @@ class SQLModel(db.Model):
                 self._dirty.add(key)
             # 针对None的字段自动获取default值
             if value is None and key in self.__default__:
-                return self.__default__[key]
+                return self.__default__[key] or self.__init_json_fields__[key]
 
         return value
 
@@ -118,6 +117,8 @@ class SQLModel(db.Model):
             super().__setattr__(key, value)
         else:
             if default_json := self.__init_json_fields__.get(key):
+                if value is None:
+                    value = {}
                 for k, v in default_json.items():
                     if k not in value:
                         # 需要初始化
