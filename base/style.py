@@ -776,27 +776,41 @@ def now() -> int:
     return int(time.time() * 1000)
 
 
-def hour() -> int:
+def hour(ts: Optional[int] = None, /) -> int:
     """
     0~23
     """
-    _now = now()
-    return (_now - day_zero(_now)) // HOUR_TS
+    if ts is None:
+        ts = now()
+    return (ts - day_zero(ts)) // HOUR_TS
 
 
-def week_str() -> str:
+def week_day(ts: Optional[int] = None, /) -> int:
+    """
+    1,2,3,4,5,6,7
+    """
+    if ts is None:
+        ts = now()
+    return datetime.datetime.fromtimestamp(ts // 1000).weekday() + 1
+
+
+def week_str(ts: Optional[int] = None, /) -> str:
     """
     2020-01~2020-52
     """
-    year, week, _ = datetime.datetime.now().isocalendar()
+    if ts is None:
+        ts = now()
+    year, week, _ = datetime.datetime.fromtimestamp(ts // 1000).isocalendar()
     return f"{year}-{week:02d}"
 
 
-def week_str6() -> str:
+def week_str6(ts: Optional[int] = None, /) -> str:
     """
     202001~202052
     """
-    year, week, _ = datetime.datetime.now().isocalendar()
+    if ts is None:
+        ts = now()
+    year, week, _ = datetime.datetime.fromtimestamp(ts // 1000).isocalendar()
     return f"{year}{week:02d}"
 
 
