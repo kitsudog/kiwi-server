@@ -8,13 +8,14 @@ from functools import partial
 from typing import Dict, Type, Iterable, List, Optional
 from uuid import uuid4
 
-import config
-from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, DateTime, Column, String, BIGINT, JSON
 from sqlalchemy.orm import Session, sessionmaker, Query, scoped_session
 from sqlalchemy.orm.attributes import InstrumentedAttribute, flag_modified
 from sqlalchemy.pool import QueuePool
+
+import config
+from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
 
 db = SQLAlchemy()
 
@@ -241,8 +242,8 @@ class UUIDModel(SQLModel):
         return obj
 
     @classmethod
-    def collect_uuid(cls: Type[T], value: List[T]) -> str:
-        return json_str(list(map(lambda x: x.uuid, value)))
+    def collect_uuid(cls: Type[T], value: List[T]) -> List[str]:
+        return list(map(lambda x: x.uuid, value))
 
     @classmethod
     def by_uuid(cls: Type[T], uuid: str, fail=True) -> T:
