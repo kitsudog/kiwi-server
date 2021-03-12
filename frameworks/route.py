@@ -3,7 +3,7 @@ from typing import Callable, Dict, Optional, List
 
 import requests
 from base.interface import IMinService
-from base.style import Fail, Log, Assert, str_json
+from base.style import Fail, Log, Assert, str_json, json_str
 from frameworks.actions import FastAction
 from frameworks.base import Response, Request, ServerError
 from frameworks.redis_mongo import db_config
@@ -20,7 +20,7 @@ class HTTPRequestHandler:
 
     def __call__(self, request: Request):
         params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
-        Log(f"forward[{self.url}{self.cmd}]")
+        Log(f"forward[{self.url}{self.cmd}][{json_str(params)[:1000]}]")
         rsp = requests.post(f"{self.url}{self.cmd}", json=params, headers={
             "d-token": request.session.get_token(),
         })
