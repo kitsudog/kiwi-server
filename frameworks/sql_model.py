@@ -109,7 +109,7 @@ class SQLModel(db.Model):
                 self._dirty.add(key)
             # 针对None的字段自动获取default值
             if value is None and key in self.__default__:
-                return self.__default__[key] or self.__init_json_fields__[key]
+                return self.__init_json_fields__.get(key, self.__default__[key])
 
         return value
 
