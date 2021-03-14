@@ -461,8 +461,10 @@ class MessageChannel:
             self.cursor = int(self.redis.get(self.counter_key) or '0')
         else:
             self.min_cursor = int(self.redis.get(self.counter_start_key) or '1')
-            if self.cursor < self.min_cursor:
+            if cursor < self.min_cursor:
                 self.cursor = self.min_cursor
+            else:
+                self.cursor = cursor
         if subscribe := _topic_pool.get(channel):
             if not subscribe.thread:
                 subscribe.run()
