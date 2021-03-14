@@ -18,4 +18,4 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server
-ENTRYPOINT sh -c "test "\$IMAGE_DEBUG" = FALSE && python migrate.py && python app.py --tag=$GIT_TAG || tail -f /dev/stdout"
+ENTRYPOINT sh -c "test "\$IMAGE_DEBUG" = TRUE && tail -f /dev/stdout || ( python migrate.py && python app.py --tag=$GIT_TAG )"
