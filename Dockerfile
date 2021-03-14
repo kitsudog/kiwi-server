@@ -14,7 +14,8 @@ ENV PYTHONUNBUFFERED=1 \
     REDIS_HOST=redis \
     DB_HOST=mysql \
     GIT_TAG=$GIT_TAG \
+    IMAGE_DEBUG=FALSE \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server
-ENTRYPOINT sh -c "python migrate.py && python app.py --tag=$GIT_TAG"
+ENTRYPOINT sh -c "test "\$IMAGE_DEBUG" = FALSE && python migrate.py && python app.py --tag=$GIT_TAG || tail -f /dev/stdout"
