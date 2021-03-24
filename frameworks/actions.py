@@ -974,8 +974,7 @@ class Code:
     def all_code(cls):
         return list(map(lambda kv: kv[1], sorted(list(Code.__pool__.items()), key=lambda kv: kv[0])))
 
-    def gen_msg_func(self, param: Dict):
-        msg = self.internal_msg
+    def gen_msg_func(self, msg, param: Dict):
         for each in self.need_param:
             msg = msg.replace(each["src"], str(param[each["param"]]))
         return msg
@@ -985,6 +984,14 @@ class Code:
             raise Fail("请使用{param}语法来标记参数变量")
         elif "{" in self.internal_msg:
             for each in re.finditer(r"\$?{([^=}]+)}", self.internal_msg):
+                self.need_param.append({
+                    "src": each.group(),
+                    "param": each.groups()[0],
+                })
+        if "%s" in self.msg:
+            raise Fail("请使用{param}语法来标记参数变量")
+        elif "{" in self.msg:
+            for each in re.finditer(r"\$?{([^=}]+)}", self.msg):
                 self.need_param.append({
                     "src": each.group(),
                     "param": each.groups()[0],
@@ -1015,7 +1022,7 @@ class Code:
                     kwargs.update(param)
                 if param_str:
                     self.__param_str_to_dict(param_str, kwargs)
-                self.gen_msg_func(kwargs)
+                self.gen_msg_func(self.internal_msg, kwargs)
         if not bool(expr):
             if param_func or param or kwargs or param_str:
                 if param_func:
@@ -1024,10 +1031,14 @@ class Code:
                     kwargs.update(param)
                 if param_str:
                     self.__param_str_to_dict(param_str, kwargs)
-                internal_msg = self.gen_msg_func(kwargs)
+                if self.msg == self.internal_msg:
+                    msg = internal_msg = self.gen_msg_func(self.internal_msg, kwargs)
+                else:
+                    msg = self.gen_msg_func(self.msg, kwargs)
+                    internal_msg = self.gen_msg_func(self.internal_msg, kwargs)
                 if log:
                     Log(f"业务失败[{internal_msg}]")
-                raise BusinessException(self.code, self.msg, internal_msg=internal_msg)
+                raise BusinessException(self.code, msg, internal_msg=internal_msg)
             else:
                 if log:
                     Log(f"业务失败[{self.internal_msg}]")
