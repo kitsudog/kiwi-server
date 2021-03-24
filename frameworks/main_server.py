@@ -12,14 +12,14 @@ import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
 from PIL import Image
-# noinspection PyProtectedMember
-from gevent.pywsgi import Input
-from jinja2 import Template
-
 from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
     profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
+# noinspection PyProtectedMember
+from gevent.pywsgi import Input
+from jinja2 import Template
+
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
 from .base import Request, IPacket, TextResponse, Response
 from .context import DefaultRouter, Server
@@ -310,8 +310,8 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                             content_disposition[k] = v
                             if k == "name":
                                 raw_bytes = each[content_start:-2]
-                                if head_dict.get("content-type", "text").lower().endswith(
-                                        "octet-stream"):
+                                content_type = head_dict.get("content-type", "text").lower()
+                                if content_type.endswith("octet-stream") or content_type.startswith("image/"):
                                     _params_tmp[v].append(ActionBytes(raw_bytes))
                                 else:
                                     _params_tmp[v].append(raw_bytes.decode("utf-8"))
