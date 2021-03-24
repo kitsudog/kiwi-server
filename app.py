@@ -67,7 +67,7 @@ from frameworks.sql_model import db
 # pretty_errors.replace_stderr()
 # pretty_errors.blacklist(os.path.join(os.path.dirname(__file__), 'venv'))
 
-TAG = os.environ.get("GIT_TAG", "no-tag")
+TAG = os.environ.get("GIT_TAG", "dev")
 if has_sentry():
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
