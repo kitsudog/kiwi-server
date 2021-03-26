@@ -48,11 +48,82 @@ def main():
 
 
 if __name__ == '__main__':
-    # pythonpath注入
+    # python_path注入
     import sys
 
     sys.path.insert(0, os.path.dirname(sys.argv[0]))
     from frameworks import db_sample
 
     db_sample.prepare()
-    main()
+    if len(sys.argv) > 1 and sys.argv[1]:
+        if sys.argv[1] == "reset":
+            # 重新获取第一个版本
+            from frameworks.sql_model import sql_alchemy_binds
+            import pymysql
+
+            params = re.search(
+                r"://((?P<username>[^:]*)(:(?P<password>[^@]*))?@)?(?P<host>[^:]*)(:(?P<port>\d*))?/(?P<database>[^?]*)",
+                sql_alchemy_binds["main"]).groupdict()
+            with pymysql.connect(
+                    host=params["host"],
+                    user=params["username"] or "root",
+                    password=params["password"] or "",
+                    database=params["database"],
+                    port=int(params["port"] or 3306),
+            ) as conn:
+                with conn.cursor() as cursor:
+                    try:
+                        cursor.execute("select version_num from alembic_version")
+                        if line := cursor.fetchone():
+                            cur_version = line[0]
+                        else:
+                            cursor = None
+                    except pymysql.ProgrammingError:
+                        cur_version = None
+
+            with pymysql.connect(
+                    host="localhost",
+                    user="root",
+                    password="",
+                    # database="mysql",
+                    port=3306
+            ) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("show databases")
+                    if ("__migrate",) in cursor.fetchall():
+                        cursor.execute("use __migrate")
+                        cursor.execute("show tables")
+                        if tables := cursor.fetchall():
+                            rebuild = True
+                            if (("alembic_version",),) == tables:
+                                cursor.execute("select count(1) from alembic_version")
+                                if cursor.fetchone() == 0:
+                                    rebuild = False
+                            if rebuild:
+                                cursor.execute("drop database __migrate")
+                                cursor.execute("create database __migrate")
+                    else:
+                        cursor.execute("create database __migrate")
+                conn.commit()
+            sql_alchemy_binds.update({
+                'main': f'mysql+pymysql://root:@127.0.0.1:3306/__migrate?charset=utf8mb4',
+            })
+            if os.path.exists("migrations/versions"):
+                for each in os.listdir("migrations/versions"):
+                    if each.endswith(".py"):
+                        os.remove(os.path.join("migrations/versions", each))
+            main()
+            if cur_version:
+                for each in os.listdir("migrations/versions"):
+                    if each.endswith(".py"):
+                        version = each[:-4]
+                        os.rename(os.path.join("migrations/versions", each), f"migrations/versions/{cur_version}_.py")
+                        with open(f"migrations/versions/{cur_version}_.py", mode="r") as fin:
+                            content = fin.readlines()
+                        with open(f"migrations/versions/{cur_version}_.py", mode="w") as fout:
+                            for line in content:
+                                line = line.replace(f"""revision = '{version}'""", f"""revision = '{cur_version}'""")
+                                fout.write(line)
+                        break
+    else:
+        main()

@@ -494,14 +494,18 @@ def _sql_session(schema: str) -> Session:
     return _session
 
 
-def __init_model():
+def __init_models():
+    print("__init_models")
     for root, _, files in os.walk("modules", followlinks=True):
         for each in files:
             if each == "models.py":
+                print(f"load models[{root}]")
                 exec(f"import {root.replace('/', '.')}.{each[:-3]}")
+    print("__init_models over")
 
 
 # 为了激活migrate准备的
-__init_model()
+__init_models()
 sql_alchemy_metadata = db.metadata
+print(f"tables[{','.join(sorted(sql_alchemy_metadata.tables.keys()))}]")
 sql_alchemy_binds = config.SQLALCHEMY_BINDS
