@@ -34,7 +34,7 @@ def db_redis(index) -> Redis:
         port = int(port)
     elif re.compile(r"tcp://[^:]+:\d+").fullmatch(port):
         port = int(port.split(":")[-1])
-    password = os.environ.get("REDIS_AUTH", None)
+    password = os.environ.get("REDIS_PASS", os.environ.get("REDIS_AUTH", None))
     if not host or not port:
         Log(f"redis配置错误[{host}:{port}]")
         exit(1)
