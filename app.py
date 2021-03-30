@@ -68,6 +68,9 @@ from frameworks.sql_model import db
 # pretty_errors.blacklist(os.path.join(os.path.dirname(__file__), 'venv'))
 
 TAG = os.environ.get("GIT_TAG", "dev")
+if TAG == "no-tag":
+    with Block("从文件读取"):
+        TAG = read_file("git-tag.txt").splitlines()[0]
 if has_sentry():
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration

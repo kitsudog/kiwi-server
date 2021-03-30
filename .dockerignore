@@ -1,6 +1,6 @@
-.git
 /venv
 /logs
+/static/uploads
 /__data
 /docker-compose.yaml
 /compose-*.yaml

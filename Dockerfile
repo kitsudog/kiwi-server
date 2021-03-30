@@ -6,6 +6,7 @@ COPY requirements.txt /app/server/requirements.txt
 RUN pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 WORKDIR /app/server
 VOLUME /app/server/static/uploads
+VOLUME /app/server/logs
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/server \
     PYTHON_PRETTY_ERRORS_ISATTY_ONLY=1 \
@@ -19,4 +20,5 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server
+RUN echo `git describe --exact-match HEAD || git rev-parse --abbrev-ref HEAD | grep -v HEAD`@`git rev-parse HEAD` > git-tag.txt && rm -fr .git
 ENTRYPOINT sh -c "test "\$IMAGE_DEBUG" = TRUE && tail -f /dev/stdout || ( python migrate.py && python app.py --tag=$GIT_TAG )"
