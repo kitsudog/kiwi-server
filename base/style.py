@@ -525,7 +525,7 @@ class Block:
                     return True
             else:
                 if self.log_fail:
-                    Trace("Block[%s] 出错了" % self.title, exc_val)
+                    Trace("Block[%s] 出错了" % self.title, exc_val, exc_info=(exc_type, exc_val, exc_tb))
 
         return not self.fail
 
@@ -599,13 +599,17 @@ def Profile(msg) -> NoReturn:
     Log(msg, _logger=profiler_logger)
 
 
-def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False) -> NoReturn:
+def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None) -> NoReturn:
     if e is None:
         Log(("%s\n" % msg) + "".join(traceback.format_stack()), first="[TRACE] + ", prefix="[TRACE] - ")
     else:
         if __SENTRY:
-            capture_exception(e)
-        exc_type, exc_value, exc_tb = sys.exc_info()
+            try:
+                capture_exception(e)
+            except Exception as ee:
+                # PATCH: 这个错误不能用传统的方案, 否则会死循环
+                Log("SENTRY提交异常 " + str(ee))
+        exc_type, exc_value, exc_tb = exc_info or sys.exc_info()
         trace_info = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
         out = '''\
 %s %s
