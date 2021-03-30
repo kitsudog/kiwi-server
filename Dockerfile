@@ -15,6 +15,7 @@ ENV PYTHONUNBUFFERED=1 \
     DB_HOST=mysql \
     GIT_TAG=$GIT_TAG \
     IMAGE_DEBUG=FALSE \
+    DEBUG=FALSE \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server

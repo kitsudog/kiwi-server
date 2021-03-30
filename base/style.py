@@ -525,7 +525,7 @@ class Block:
                     return True
             else:
                 if self.log_fail:
-                    Trace("Block[%s] 出错了" % self.title, exc_type)
+                    Trace("Block[%s] 出错了" % self.title, exc_val)
 
         return not self.fail
 
