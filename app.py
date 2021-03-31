@@ -244,7 +244,7 @@ def after_request(response: Response):
 
 @app.route('/')
 def index():
-    return f'Hello World[{TAG}]!'
+    return f'Hello World[{config.TAG}]!'
 
 
 @app.route('/<int:product_id>/callback')
