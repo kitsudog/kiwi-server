@@ -67,10 +67,7 @@ from frameworks.sql_model import db
 # pretty_errors.replace_stderr()
 # pretty_errors.blacklist(os.path.join(os.path.dirname(__file__), 'venv'))
 
-TAG = os.environ.get("GIT_TAG", "dev")
-if TAG == "no-tag":
-    with Block("从文件读取"):
-        TAG = read_file("git-tag.txt").splitlines()[0]
+
 if has_sentry():
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
@@ -162,7 +159,7 @@ if has_sentry():
         traces_sample_rate=1.0,
         sample_rate=1.0,
         debug=is_debug(),
-        release=TAG,
+        release=config.TAG,
         max_breadcrumbs=100,
         attach_stacktrace=True,
         send_default_pii=True,
@@ -360,8 +357,7 @@ def startup(forever=True):
               ), show_default=True, help="启动的模式", )
 def main(**kwargs):
     if kwargs.get("tag"):
-        global TAG
-        TAG = kwargs["tag"]
+        config.TAG = kwargs["tag"]
     _main(**kwargs)
     startup()
 
