@@ -20,5 +20,5 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server
-RUN ls -al && echo `git describe --exact-match HEAD || git rev-parse --abbrev-ref HEAD`@`git rev-parse HEAD` |tee git-tag.txt && rm -fr .git
+RUN ls -al && echo `git describe --exact-match HEAD || git rev-parse --abbrev-ref HEAD`@`git rev-parse HEAD` |tee git-tag.txt
 ENTRYPOINT sh -c "test "\$IMAGE_DEBUG" = TRUE && tail -f /dev/stdout || ( python migrate.py && python app.py --tag=$GIT_TAG )"
