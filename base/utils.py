@@ -97,6 +97,10 @@ def base64decode(src: str) -> bytes:
         return base64.b64decode(src)
 
 
+def base64decode2str(src: str) -> str:
+    return base64decode(src).decode("utf-8")
+
+
 def base32decode(src: str) -> bytes:
     import base64
     return base64.b32decode(src)
