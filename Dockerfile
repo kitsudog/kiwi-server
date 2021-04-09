@@ -1,5 +1,7 @@
 FROM python:3.8
 ARG GIT_TAG=no-tag
+ARG LOG_NAME=server
+ARG DB_NAME=account
 WORKDIR /app/server
 COPY requirements.txt /app/server/requirements.txt
 # export ARCHFLAGS="-arch x86_64"
@@ -17,6 +19,8 @@ ENV PYTHONUNBUFFERED=1 \
     GIT_TAG=$GIT_TAG \
     IMAGE_DEBUG=FALSE \
     DEBUG=FALSE \
+    LOG_NAME=$LOG_NAME \
+    DB_NAME=$DB_NAME \
     TZ=Asia/Shanghai
 EXPOSE 8000
 COPY . /app/server

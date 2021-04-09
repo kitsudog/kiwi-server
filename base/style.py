@@ -264,11 +264,13 @@ def __init_log():
     simple_formatter = logging.Formatter('%(message)s')
     console_formatter = logging.Formatter('%(message)s')
 
-    server_file_handler = SmartRotatingFileHandler("server")
+    if prefix := os.environ.get("LOG_NAME", ""):
+        prefix = f"{prefix}-"
+    server_file_handler = SmartRotatingFileHandler(prefix + "server")
 
     server_file_handler.setLevel(logging.DEBUG if __DEBUG else logging.INFO)
     server_file_handler.setFormatter(simple_formatter)
-    profiler_file_handler = SmartRotatingFileHandler("profiler")
+    profiler_file_handler = SmartRotatingFileHandler(prefix + "profiler")
 
     profiler_file_handler.setLevel(logging.DEBUG if __DEBUG else logging.INFO)
     profiler_file_handler.setFormatter(simple_formatter)
