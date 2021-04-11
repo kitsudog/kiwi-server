@@ -265,7 +265,8 @@ def __init_log():
     console_formatter = logging.Formatter('%(message)s')
 
     if prefix := os.environ.get("LOG_NAME", ""):
-        prefix = f"{prefix}-"
+        if prefix != "server":
+            prefix = f"{prefix}-"
     server_file_handler = SmartRotatingFileHandler(prefix + "server")
 
     server_file_handler.setLevel(logging.DEBUG if __DEBUG else logging.INFO)
