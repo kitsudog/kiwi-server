@@ -62,6 +62,7 @@ def dump_func(func):
 def load_module(full_name):
     with Block(f"load_module[{full_name}]"):
         if full_name not in sys.modules:
+            Log(f"加载模块[{full_name}]")
             exec(f"import {full_name}")
         return sys.modules[full_name]
 
