@@ -2,8 +2,9 @@
 from typing import Callable, Dict, Optional, List
 
 import requests
+
 from base.interface import IMinService
-from base.style import Fail, Log, Assert, str_json, json_str
+from base.style import Fail, Log, Assert, str_json, json_str, now
 from frameworks.actions import FastAction
 from frameworks.base import Response, Request, ServerError
 from frameworks.redis_mongo import db_config
@@ -21,19 +22,20 @@ class HTTPRequestHandler:
     def __call__(self, request: Request):
         params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
         Log(f"forward[{self.url}{self.cmd}][{json_str(params)[:1000]}]")
+        start = now()
         rsp = requests.post(f"{self.url}{self.cmd}", json=params, headers={
             "d-token": request.session.get_token(),
         })
-        if rsp.status_code != 200:
-            pass
+        cost = now() - start
+        if cost > 3000:
+            Log(f"forward[{self.url}{self.cmd}][{json_str(params)[:1000]}]cost[{cost}ms]")
+        result = rsp.json()
+        if result.get("ret") == 0:
+            return Response(result["ret"], result["result"], result["cmd"])
         else:
-            result = rsp.json()
-            if result.get("ret") == 0:
-                return Response(result["ret"], result["result"], result["cmd"])
-            else:
-                ret = Response(result.get("ret", -1), {}, cmd=self.cmd)
-                ret.error = result.get("error", "服务器异常")
-                return ret
+            ret = Response(result.get("ret", -1), {}, cmd=self.cmd)
+            ret.error = result.get("error", "服务器异常")
+            return ret
 
 
 class ForwardAction(FastAction):
