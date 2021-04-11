@@ -5,6 +5,12 @@ from abc import abstractmethod
 from base.style import hour_zero, day_zero, minute_zero
 
 
+class IInit(object):
+    @abstractmethod
+    def init(self):
+        pass
+
+
 class IService(object):
     @abstractmethod
     def cycle(self, _now):

@@ -1,6 +1,6 @@
 from typing import List, Set, Type, Dict, Union
 
-from base.interface import ITick, IService
+from base.interface import ITick, IService, IInit
 from base.style import Assert, now, json_str, has_sentry
 from frameworks.base import Context
 
@@ -27,6 +27,8 @@ class ServerContext(Context):
             self.add_service(mgr)
         if isinstance(mgr, ITick):
             self.add_tick(mgr)
+        if isinstance(mgr, IInit):
+            mgr.init()
 
     def add_tick(self, tick: ITick) -> ITick:
         Assert(tick not in self.tick_list, "不能重复添加tick")
