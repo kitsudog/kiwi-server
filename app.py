@@ -367,7 +367,12 @@ def _main(mode: Iterable[str]):
     Log("初始化服务器")
     with Block("启动服务器"):
         module_conf: Dict = eval(read_file("conf/module.conf"))
-        module_conf["full"] = flatten(module_conf.values())
+        if full_module := os.environ.get("FULL_MODULE"):
+            Log(f"外部指定加载的模块[{full_module}]")
+            module_conf["full"] = full_module.split(",")
+        else:
+            Log("默认加载模块")
+            module_conf["full"] = flatten(module_conf.values())
         all_entry = flatten(list(map(lambda x: module_conf[x], mode)))
         all_module = {
 

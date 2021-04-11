@@ -70,6 +70,7 @@ class Router(IMinService):
         """
         远端的handler
         """
+        # todo: 识别循环forward
         for each in cmd:
             action = ForwardAction(HTTPRequestHandler(module, each, url))
             action.module = f"{module}@{url}"
