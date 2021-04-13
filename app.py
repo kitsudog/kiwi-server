@@ -335,9 +335,9 @@ def startup(forever=True):
     gevent.spawn(gevent_tick_cycle)
     gevent.spawn(gevent_service_cycle)
     if forever:
+        Log("Server Ready ...")
         if not is_dev() and not is_debug():
             inactive_console()
-        Log("Server Ready ...")
         if is_dev():
             app.run(host="0.0.0.0", port=8000, debug=True)
         else:
