@@ -2,7 +2,6 @@ from abc import abstractmethod
 from time import sleep
 
 import gevent
-
 from base.interface import ITask
 from base.style import Trace, Log
 
@@ -57,11 +56,11 @@ class UtilSuccessTask(ITask):
             except Exception as e:
                 Trace(f"任务[{self.__class__.__name__}]执行出现异常", e)
                 sleep(10)
+        Log(f"任务[{self.__class__.__name__}]执行完毕[{self.number}]")
 
     def run(self):
-        while True:
-            Log(f"任务[{self.__class__.__name__}]开始执行一轮")
-            self.init()
-            task = gevent.spawn(self.__run)
-            gevent.joinall([task])
-            Log(f"任务[{self.__class__.__name__}]执行完毕一轮")
+        Log(f"任务[{self.__class__.__name__}]开始执行一轮")
+        self.init()
+        task = gevent.spawn(self.__run)
+        gevent.joinall([task])
+        Log(f"任务[{self.__class__.__name__}]执行完毕一轮")
