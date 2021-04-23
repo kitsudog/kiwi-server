@@ -12,14 +12,14 @@ import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
 from PIL import Image
-from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
-    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
-from base.utils import read_binary_file, read_file, md5bytes, write_file
-from base.valid import ExprIP
 # noinspection PyProtectedMember
 from gevent.pywsgi import Input
 from jinja2 import Template
 
+from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
+    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
+from base.utils import read_binary_file, read_file, md5bytes, write_file
+from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
 from .base import Request, IPacket, TextResponse, Response
 from .context import DefaultRouter, Server
@@ -164,7 +164,7 @@ class NodeInjector(Action.Injector):
 
     def from_req(self, req: Request) -> any:
         FBCode.CODE_尚未登录(req.session.is_login)
-        return self.type_hint.by_str_id(req.session.uuid)
+        return self.type_hint.by_str_id(req.session.uuid, auto_new=True)
 
 
 class UUIDNodeInjector(Action.Injector):
