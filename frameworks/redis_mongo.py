@@ -9,15 +9,14 @@ import re
 import time
 from collections import ChainMap
 from math import ceil
-from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict
+from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict, Generator
 
 import gevent
 import pymongo
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
-
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -682,6 +681,10 @@ def db_get_list(key_list: Sequence[str], allow_not_found=True, fail=True, model=
 
 def db_keys(pattern: str) -> List[str]:
     return db_model.keys(pattern)
+
+
+def db_keys_iter(pattern: str) -> Iterable[str]:
+    return db_model.scan_iter(match=pattern, count=100)
 
 
 def db_get(key, *, default=None, fail=True, model=None) -> str:

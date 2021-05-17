@@ -401,7 +401,7 @@ class BaseInfo(BaseSaveModel, ABC):
         super().__init__()
 
     @classmethod
-    def by_str_id(cls: Generic[T], _id: str, auto_new=False, fail=True) -> T:
+    def by_str_id(cls: Type[T], _id: str, auto_new=False, fail=True) -> T:
         return cls.by_id(int(_id), auto_new=auto_new, fail=fail)
 
     @classmethod
@@ -420,10 +420,11 @@ class BaseInfo(BaseSaveModel, ABC):
         return ret
 
     @classmethod
-    def new_one(cls):
+    def new_one(cls: Type[T], save_right_now=True) -> T:
         info = cls()
         info.set_id(_fetch_id(cls))
-        info.save()
+        if save_right_now:
+            info.save()
         return info
 
 
@@ -661,6 +662,15 @@ class __SampleSimpleDef(SimpleDef):
 
 
 class __SampleSimpleNode(SimpleNode):
+    a: int = SimpleModel.INT
+    b: str = SimpleModel.STR
+    c: int = SimpleModel.BOOL
+    d: str = SimpleModel.FLOAT
+    e: int = []
+    g: str = {}
+
+
+class __SampleSimpleInfo(SimpleInfo):
     a: int = SimpleModel.INT
     b: str = SimpleModel.STR
     c: int = SimpleModel.BOOL
