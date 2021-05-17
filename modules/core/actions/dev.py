@@ -5,6 +5,8 @@ from frameworks.actions import GetAction, local_request, FastAction, Action, Cod
 from frameworks.base import HTMLPacket
 from frameworks.context import DefaultRouter
 from frameworks.redis_mongo import db_other
+from frameworks.server_context import SessionContext
+from frameworks.session import SessionMgr
 
 
 def markdown_html(markdown: str, css: str) -> HTMLPacket:
@@ -373,3 +375,11 @@ def api_list(module="*"):
     width: 300px;
 }
 """)
+
+
+@Action
+def login0(__session: SessionContext, uuid: str):
+    SessionMgr.login(__session, uuid)
+    return {
+        "token": __session.get_token(),
+    }
