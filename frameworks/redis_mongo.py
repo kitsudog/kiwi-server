@@ -9,14 +9,15 @@ import re
 import time
 from collections import ChainMap
 from math import ceil
-from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict, Generator
+from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict
 
 import gevent
 import pymongo
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 from gevent.event import AsyncResult
 from redis import Connection, RedisError
 from redis.client import Redis
+
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -640,7 +641,7 @@ def index_list(key: str, start: int = 0, length: int = -1, reverse=False):
 
 
 def db_get_json_list(key_list, allow_not_found=True, fail=True, model=None) -> List[Dict]:
-    return list(map(json.loads, db_get_list(key_list, allow_not_found=allow_not_found, fail=fail, model=model)))
+    return list(map(str_json, db_get_list(key_list, allow_not_found=allow_not_found, fail=fail, model=model)))
 
 
 def db_get_json(key, fail=True, model=None) -> Optional[dict]:
@@ -660,13 +661,15 @@ def db_get_list(key_list: Sequence[str], allow_not_found=True, fail=True, model=
         Log(f"耗时的db操作[len={len(key_list)}][cost={cost:.3f}][key={','.join(key_list[:10])}]")
     ret = list(filter(lambda x: x is not None, orig_ret))
     if len(ret) != len(key_list):
+        # 开始填充mongo里的
         if model is not None:
             tmp = model + ":"
             assert len(list(filter(lambda x: not x.startswith(tmp), key_list))) == 0
         for i, k_v in enumerate(zip(key_list, orig_ret)):
             if k_v[1] is not None:
                 continue
-            orig_ret[i] = mongo_get(k_v[0], model=model)
+            if value := mongo_get(k_v[0], model=model):
+                orig_ret[i] = json_str(value)
         ret = list(filter(lambda x: x is not None, orig_ret))
 
     if len(ret) != len(key_list):

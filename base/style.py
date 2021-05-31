@@ -99,7 +99,7 @@ class ExJSONEncoder(JSONEncoder):
             if type(o) in {map, filter}:
                 raise Fail("返回的内容中存在map/filter")
             elif isinstance(o, bytes):
-                from base.utils import base64
+                from utils import base64
                 return base64(o)
             elif isinstance(o, set):
                 return list(o)
