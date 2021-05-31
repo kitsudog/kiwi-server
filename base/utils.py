@@ -18,7 +18,7 @@ from io import BytesIO
 from typing import List, Callable, Iterable, Dict, TypedDict, Union
 from xml.etree import ElementTree
 
-from style import debug_logger, Fail, Log, T, ILock, Block
+from .style import debug_logger, Fail, Log, T, ILock, Block
 
 
 def re_find(pattern: str, string) -> List[str]:
