@@ -46,6 +46,22 @@ fi
 find project -type d -iname modules | while read line; do
   # shellcheck disable=SC2012
   ln -sF "../${line}/$(ls "${line}" | head -n1)" modules/
+  if [ -d "${line}/../static" ]; then
+    find "${line}/../static" -type f | while read static_file; do
+      source=$(python -c "import os;print(os.path.realpath('${static_file}'))")
+      target=$(python -c "import os;print(os.path.realpath('static${static_file#*static}'))")
+      mkdir -p "$(dirname "${target}")"
+      if [ -s "${target}" ]; then
+        if [ "$(md5sum "${source}" | cut -d" " -f1)" = "$(md5sum "${target}" | cut -d" " -f1)" ]; then
+          echo "pass[${source}]"
+        else
+          echo "重复的static文件[${source}]"
+        fi
+      else
+        python -c "import os;os.symlink(os.path.relpath('${source}', start=os.path.dirname('${target}')), '${target}')"
+      fi
+    done
+  fi
 done
 
 MODULES=$(find -L modules -iname main.py -d 2 | cut -d/ -f2 | sort)

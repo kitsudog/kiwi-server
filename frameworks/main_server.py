@@ -12,14 +12,14 @@ import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
 from PIL import Image
-# noinspection PyProtectedMember
-from gevent.pywsgi import Input
-from jinja2 import Template
-
 from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
     profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
+# noinspection PyProtectedMember
+from gevent.pywsgi import Input
+from jinja2 import Template
+
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
 from .base import Request, IPacket, TextResponse, Response
 from .context import DefaultRouter, Server
@@ -30,6 +30,10 @@ from .sql_model import UUIDModel, UUIDNode
 
 ignore_cmd = {"server.ping"}
 ignore_cmd_last = {}
+
+
+def reg_get_handler_ex(*, path: str, action: GetAction):
+    DefaultRouter.GET_HANDLER[f"/{path}"] = action
 
 
 def reg_handler(*, path: str, module, verbose=True):
@@ -379,7 +383,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
             _session = get_session()
             req, rsp = None, None
             try:
-                req, rsp = packet_route(_session, cmd, params, wsgi_orig_getter(environ, params))
+                req, rsp = packet_route(_session, cmd, params, wsgi_orig_getter(environ, params), action=handler)
                 ret = []
                 with Block("CROS"):
                     ret.append(("Access-Control-Allow-Origin", "*"))
@@ -512,7 +516,8 @@ def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=Tr
     return response.ret, response.result
 
 
-def packet_route(session, cmd: str, params: dict, orig_getter: Callable[[], str]) -> Tuple[Request, Optional[IPacket]]:
+def packet_route(session, cmd: str, params: dict, orig_getter: Callable[[], str],
+                 action: Optional[FastAction] = None) -> Tuple[Request, Optional[IPacket]]:
     """
     核心的处理
     """
@@ -523,6 +528,7 @@ def packet_route(session, cmd: str, params: dict, orig_getter: Callable[[], str]
         if cmd is None or params is None:
             raise Fail("协议格式错误")
         request = Request(session, cmd, params)
+        request.action = action
         request.orig_getter = orig_getter
         SessionMgr.action_start(session, request)
         response = DefaultRouter.do(request)

@@ -2,7 +2,6 @@
 from typing import Callable, Dict, Optional, List
 
 import requests
-
 from base.interface import IMinService
 from base.style import Fail, Log, Assert, str_json, json_str, now
 from frameworks.actions import FastAction
@@ -123,6 +122,6 @@ class Router(IMinService):
         return None
 
     def do(self, request: Request) -> Response:
-        _action = self.get(request.cmd)
-        request.action = _action
-        return _action(request)
+        if not request.action:
+            request.action = self.get(request.cmd)
+        return request.action(request)
