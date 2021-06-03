@@ -5,7 +5,6 @@ from collections import OrderedDict, ChainMap
 from typing import Iterable, List, Optional, Type, Generic, Dict, Generator, final
 
 import pymongo
-
 from base.style import Fail, Assert, T, Block, Suicide, Log, str_json, is_debug, json_str, Error, clone_generator
 from frameworks.redis_mongo import mongo, db_counter, db_get_json, mapping_get, db_del, db_get, mongo_set, db_set, \
     mapping_add, db_get_json_list
@@ -569,7 +568,13 @@ class SimpleNode(BaseNode):
         fields = []
         for k, v in cls.__dict__.items():
             if isinstance(k, str) and not k.startswith("_"):
-                fields.append(k)
+                if k == "mapping1":
+                    pass
+                elif callable(v):
+                    print(f"pass field {cls.__name__}:{k}")
+                    continue
+                else:
+                    fields.append(k)
         # cls.__orig_setter__ = cls.__setattr__
         # cls.__setattr__ = _setter(cls.__setattr__, fields)
         # cls.__orig_getter__ = cls.__getattribute__
