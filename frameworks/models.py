@@ -267,7 +267,7 @@ class BaseSaveModel(BaseModel, ABC):
         if mongo_right_now:
             mongo_set(self.get_key(), raw, model=self.__name__)
         mapping1 = self.mapping1()
-        if mapping1 is not None:
+        if mapping1:
             orig = self.get_orig() or {}
             if mapping1 == orig.get("_key"):
                 # 已经有了可以认为
