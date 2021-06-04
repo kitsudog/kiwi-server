@@ -5,9 +5,10 @@ from collections import OrderedDict, ChainMap
 from typing import Iterable, List, Optional, Type, Generic, Dict, Generator, final
 
 import pymongo
-from base.style import Fail, Assert, T, Block, Suicide, Log, str_json, is_debug, json_str, Error, clone_generator
+from base.style import Fail, Assert, T, Block, Suicide, Log, str_json, is_debug, json_str, Error, clone_generator, \
+    some_list
 from frameworks.redis_mongo import mongo, db_counter, db_get_json, mapping_get, db_del, db_get, mongo_set, db_set, \
-    mapping_add, db_get_json_list
+    mapping_add, db_get_json_list, db_keys_iter
 
 DEBUG = os.environ.get("DEBUG", "FALSE") == "TRUE" or os.environ.get("TEST", "FALSE") == "TRUE"
 
@@ -319,6 +320,21 @@ class BaseNode(BaseSaveModel, ABC):
     id与具体用户绑定
     """
     _auto_new = False
+
+    @classmethod
+    def some(cls: Type[T], limit=100) -> Dict[str, T]:
+        """
+        只获取redis里当期的100个
+        dump到mongo的就不主动获取了
+        适合配置之类的少量node
+        :return:
+        """
+        return cls.by_str_id_list(
+            list(map(
+                lambda x: x[len(cls.__name__ + ":"):],
+                some_list(db_keys_iter(cls.__name__ + ":*"), limit=limit)
+            ))
+        )
 
     @classmethod
     def by_str_id(cls: Type[T], _id: str, auto_new=False, fail=True) -> Optional[T]:

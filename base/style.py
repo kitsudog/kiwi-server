@@ -718,6 +718,17 @@ def no_blank_list(array: Iterable[T]) -> List[T]:
     return ret
 
 
+def some_list(_iter: Iterable[T], *, limit: int = 100) -> List[T]:
+    Assert(limit > 0, "否则没有意义了")
+    ret = []
+    for each in _iter:
+        ret.append(each)
+        if len(ret) >= limit:
+            break
+
+    return ret
+
+
 def find_all(array: Iterable[T], value: any, /, *,
              field=None, prop: str = None, key: str = None, func: Callable[[T], bool] = None) -> List[T]:
     """

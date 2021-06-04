@@ -652,6 +652,14 @@ def db_get_json(key, fail=True, model=None) -> Optional[dict]:
 
 
 def db_get_list(key_list: Sequence[str], allow_not_found=True, fail=True, model=None) -> List[str]:
+    """
+
+    :param key_list:
+    :param allow_not_found:
+    :param fail:
+    :param model: 从mongo里注入(前提是key_list是同一个model的)
+    :return:
+    """
     if len(key_list) == 0:
         return []
     start = time.time()
