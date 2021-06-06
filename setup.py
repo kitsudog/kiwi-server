@@ -12,6 +12,6 @@ def get_package():
 
 setup(
     version=f"0.1.{time.strftime('%Y%m%d%H%M', time.localtime())}",
-    packages=["base", "frameworks", "kiwi", "modules/core", "static", "migrations"],
+    packages=["base", "frameworks", "kiwi", "modules", "static", "migrations"],
     install_requires=get_package(),
 )

@@ -5,4 +5,8 @@ exclude dist *
 exclude kiwi_server.egg-info *
 graft static
 graft scripts
+graft base
+graft frameworks
 graft migrations
+graft modules
+graft kiwi
