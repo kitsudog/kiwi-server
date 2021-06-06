@@ -6,3 +6,6 @@
 /compose-*.yaml
 /main.sql
 /docker
+/dist
+/build
+**/__pycache__
