@@ -10,8 +10,16 @@ def get_package():
         return fin.readlines()
 
 
+def get_version():
+    if os.environ.get("VIRTUAL_ENV"):
+        print("update force")
+        return f"0.1.{time.strftime('%Y%m%d%H%M', time.localtime())}",
+    else:
+        return _version.__version__
+
+
 setup(
-    version=f"0.1.{time.strftime('%Y%m%d%H%M', time.localtime())}",
+    version=get_version(),
     packages=["base", "frameworks", "kiwi", "modules", "static", "migrations"],
     install_requires=get_package(),
 )
