@@ -1,2 +1,1 @@
-__version__ = '0.1.0'
-__releasedate__ = '20210606'
+__version__ = '0.1.1'
