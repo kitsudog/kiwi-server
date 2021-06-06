@@ -15,6 +15,7 @@ def get_version():
         print("update force")
         return f"0.1.{time.strftime('%Y%m%d%H%M', time.localtime())}",
     else:
+        import _version
         return _version.__version__
 
 
