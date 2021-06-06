@@ -10,6 +10,6 @@ def get_package():
 
 
 setup(
-    packages=["base", "frameworks", "modules/core", "static", "migrations"],
+    packages=["base", "frameworks", "kiwi", "modules/core", "static", "migrations"],
     install_requires=get_package(),
 )
