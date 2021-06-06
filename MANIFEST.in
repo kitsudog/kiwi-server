@@ -1,0 +1,4 @@
+global-exclude __pycache__
+graft static
+graft scripts
+graft migrations

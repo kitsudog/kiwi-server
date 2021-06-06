@@ -29,8 +29,11 @@ setup(
     url='',
     author='dave luo',
     license='BSD',
-    packages=find_packages(),
+    packages=["base", "frameworks", "modules/core"],
     install_requires=get_package(),
+    package_data={
+        "static": ["static/**"]
+    },
     include_package_data=True,
     classifiers=[
     ],
