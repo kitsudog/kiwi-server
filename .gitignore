@@ -12,3 +12,6 @@ __pycache__
 /static/uploads
 /cookies.txt
 /config.py
+/build
+/*.egg-info
+/dist
