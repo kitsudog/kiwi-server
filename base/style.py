@@ -268,6 +268,8 @@ def __init_log():
     if prefix := os.environ.get("LOG_NAME", ""):
         if prefix != "server":
             prefix = f"{prefix}-"
+        else:
+            prefix = ""
     server_file_handler = SmartRotatingFileHandler(prefix + "server")
 
     server_file_handler.setLevel(logging.DEBUG if __DEBUG else logging.INFO)
