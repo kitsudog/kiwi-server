@@ -12,18 +12,18 @@ import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
 from PIL import Image
-from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
-    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
-from base.utils import read_binary_file, read_file, md5bytes, write_file
-from base.valid import ExprIP
 # noinspection PyProtectedMember
 from gevent.pywsgi import Input
 from jinja2 import Template
 
+from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
+    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
+from base.utils import read_binary_file, read_file, md5bytes, write_file
+from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
 from .base import Request, IPacket, TextResponse, Response
 from .context import DefaultRouter, Server
-from .models import BaseNode
+from .models import BaseNode, BaseSaveModel
 from .server_context import SessionContext
 from .session import SessionMgr
 from .sql_model import UUIDModel, UUIDNode
@@ -159,12 +159,24 @@ class UUIDModelInjector(Action.Injector):
         return f"[{self.type_hint.__tablename__}::uuid]"
 
 
+class ModelInjector(Action.Injector):
+    def verify_param(self):
+        Assert(not self.param.startswith("_"), f"参数[{self.param}]必须是[_]开头")
+
+    def verify_hint(self):
+        Assert(issubclass(self.type_hint, BaseSaveModel), "不是model")
+
+    def from_str_value(self, value: str):
+        model_cls: Type[BaseSaveModel] = self.type_hint
+        return model_cls.by_str_id(value)
+
+
 class NodeInjector(Action.Injector):
     def verify_hint(self):
-        Assert(issubclass(self.type_hint, BaseNode))
+        Assert(issubclass(self.type_hint, BaseNode), "不是node")
 
     def verify_param(self):
-        Assert(self.param.startswith("__"))
+        Assert(self.param.startswith("__"), "参数必须是__开头")
 
     def from_req(self, req: Request) -> any:
         FBCode.CODE_尚未登录(req.session.is_login)

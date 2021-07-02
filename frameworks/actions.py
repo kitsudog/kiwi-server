@@ -386,8 +386,8 @@ class Action(FastAction):
 
     class JsonSetInjector(Injector):
         def verify_hint(self):
-            Assert(not issubclass(self.type_hint, str))
-            Assert(issubclass(self.type_hint, set))
+            Assert(not issubclass(self.type_hint, str), f"type_hint[{self.type_hint}]不能是字符串")
+            Assert(issubclass(self.type_hint, set), f"type_hint[{self.type_hint}]必须是set")
 
         def verify_value(self, value):
             Assert(isinstance(value, set))
@@ -459,6 +459,11 @@ class Action(FastAction):
 
         def verify_value(self, value):
             Assert(value in self.value_set, "枚举的值必须在范围内")
+
+        def from_str_value(self, value):
+            if value in self.value_set:
+                return value
+            raise Fail(f"参数[{self.alias}]值[{value}]不在枚举[{self.value_set}]范围内")
 
         def from_value(self, value):
             if value in self.value_set:
