@@ -449,6 +449,11 @@ class Action(FastAction):
             self.value_set = None
             super().__init__(*args, **kwargs)
 
+        def verify_hint(self):
+            super().verify_hint()
+            if self.orig_hint:
+                Assert(self.orig_hint in (int, str), "要明确标记是int/str")
+
         # noinspection PyTypeChecker
         def prepare(self):
             Assert(isinstance(self.default_value, set), "必须指定`set`")
