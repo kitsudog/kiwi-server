@@ -5,6 +5,7 @@ from collections import OrderedDict, ChainMap
 from typing import Iterable, List, Optional, Type, Generic, Dict, Generator, final
 
 import pymongo
+
 from base.style import Fail, Assert, T, Block, Suicide, Log, str_json, is_debug, json_str, Error, clone_generator, \
     some_list
 from frameworks.redis_mongo import mongo, db_counter, db_get_json, mapping_get, db_del, db_get, mongo_set, db_set, \
@@ -255,7 +256,7 @@ class BaseSaveModel(BaseModel, ABC):
                         orig = orig[0]
                         if orig.get("version"):
                             if orig.get("version") != orig_version:
-                                if orig_version < 0:
+                                if orig_version <= 0:
                                     pass
                                 else:
                                     Log(f"orig data [{key}=>{orig}]")
