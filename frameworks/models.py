@@ -736,7 +736,7 @@ __SampleSimpleDef.reload_def([{
     "d": 1.0,
     "e": [],
     "g": {},
-}])
+}], reset=False)
 Assert(__tmp.a == 2)
 
 
