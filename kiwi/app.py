@@ -22,7 +22,6 @@ from flask import Flask, request, Response, send_from_directory
 from flask_cors import CORS
 from flask_migrate import Migrate
 
-import config
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
     has_sentry
 from base.utils import read_file, flatten, load_module
@@ -67,6 +66,10 @@ from frameworks.sql_model import db
 # pretty_errors.replace_stderr()
 # pretty_errors.blacklist(os.path.join(os.path.dirname(__file__), 'venv'))
 
+if config := load_module("config", fail=False):
+    TAG = config.TAG
+else:
+    TAG = os.environ.get("TAG", "dev")
 
 if has_sentry():
     import sentry_sdk
@@ -140,7 +143,6 @@ if has_sentry():
         return event
 
 
-    # noinspection PyUnusedLocal
     def before_breadcrumb(crumb: SentryCrumbDict, hint: SentryCrumbHintDict):
         return crumb
 
@@ -159,7 +161,7 @@ if has_sentry():
         traces_sample_rate=1.0,
         sample_rate=1.0,
         debug=is_debug(),
-        release=config.TAG,
+        release=TAG,
         max_breadcrumbs=100,
         attach_stacktrace=True,
         send_default_pii=True,
@@ -178,7 +180,8 @@ if has_sentry():
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
-app.config.from_object(config)
+if config:
+    app.config.from_object(config)
 db.init_app(app)
 app.debug = is_dev()
 migrate = Migrate(app, db)
@@ -234,6 +237,7 @@ def after_request(response: Response):
             }
         if "code" not in ret:
             ret["code"] = 0
+        # noinspection PyArgumentList
         response.set_data(json.dumps(ret))
         if is_dev() and request.method == "POST":
             print(f"[C=>S] {request.path}", getattr(request, "params", {}))
@@ -244,7 +248,7 @@ def after_request(response: Response):
 
 @app.route('/')
 def index():
-    return f'Hello World[{config.TAG}]!'
+    return f'Hello World[{TAG}]!'
 
 
 @app.route('/<int:product_id>/callback')
@@ -357,7 +361,8 @@ def startup(forever=True):
               ), show_default=True, help="启动的模式", )
 def main(**kwargs):
     if kwargs.get("tag"):
-        config.TAG = kwargs["tag"]
+        global TAG
+        TAG = kwargs["tag"]
     _main(**kwargs)
     startup()
 

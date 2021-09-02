@@ -2,14 +2,14 @@ import json
 import os
 from abc import abstractmethod, ABC
 from collections import OrderedDict, ChainMap
-from typing import Iterable, List, Optional, Type, Generic, Dict, Generator, final
+from typing import Iterable, List, Optional, Type, Generic, Dict, Generator, final, Union
 
 import pymongo
 
 from base.style import Fail, Assert, T, Block, Suicide, Log, str_json, is_debug, json_str, Error, clone_generator, \
     some_list
 from frameworks.redis_mongo import mongo, db_counter, db_get_json, mapping_get, db_del, db_get, mongo_set, db_set, \
-    mapping_add, db_get_json_list, db_keys_iter
+    mapping_add, db_get_json_list, db_keys_iter, db_config
 
 DEBUG = os.environ.get("DEBUG", "FALSE") == "TRUE" or os.environ.get("TEST", "FALSE") == "TRUE"
 
@@ -164,7 +164,7 @@ class BaseDef(BaseModel, ABC):
         super().__init_subclass__(**kwargs)
         cls.__pool__ = OrderedDict()
 
-    def __init__(self, _id: int):
+    def __init__(self, _id: Union[str, int]):
         super().__init__()
         self.set_id(_id)
         self.__inited = False
@@ -204,8 +204,19 @@ class BaseDef(BaseModel, ABC):
         cls.__pool__.clear()
 
     @classmethod
-    def load_from_csv(cls, content: str):
-        pass
+    def reload_def(cls, content: List[Dict], reset=True):
+        header_set = set(["id"] + cls.__fields__)
+        for each in content:
+            Assert(set(each.keys()) >= header_set, "csv的字段和def不匹配")
+        if reset:
+            cls.reset_pool()
+        for value in content:
+            _id = value["id"]
+            if obj := cls.__pool__.get(_id):  # type: BaseDef
+                obj.__inited = False
+                obj.from_json(value)
+            else:
+                cls.by_json(value)
 
 
 class BaseSaveModel(BaseModel, ABC):
@@ -670,6 +681,29 @@ class SimpleInfo(BaseInfo):
                 setattr(self, each, _json_data[each])
 
 
+class RedisDef(SimpleDef):
+
+    # noinspection PyTypeChecker
+    def __init__(self, _id: str):
+        super().__init__(_id)
+
+    @classmethod
+    def save(cls: Type[T], value: T):
+        db_config.hset(cls.__name__, value.get_key(), value.to_json_str())
+
+    @classmethod
+    def delete(cls: Type[T], value: T):
+        del cls.__pool__[value.id]
+        db_config.hdel(cls.__name__, value.get_key())
+
+    @classmethod
+    def reload_redis(cls):
+        tmp = []
+        for k, v in db_config.hgetall(cls.__name__).items():
+            tmp.append(str_json(v))
+        cls.reload_def(tmp)
+
+
 class AutoNewSimpleNode(SimpleNode):
     _auto_new = True
 
@@ -678,9 +712,32 @@ class __SampleSimpleDef(SimpleDef):
     a: int = SimpleModel.INT
     b: str = SimpleModel.STR
     c: int = SimpleModel.BOOL
-    d: str = SimpleModel.FLOAT
+    d: float = SimpleModel.FLOAT
     e: int = []
     g: str = {}
+
+
+__SampleSimpleDef.reload_def([{
+    "id": "a",
+    "a": 1,
+    "b": "1",
+    "c": 1,
+    "d": 1.0,
+    "e": [],
+    "g": {},
+}])
+__tmp = __SampleSimpleDef.by_str_id("a")
+Assert(__tmp.a == 1)
+__SampleSimpleDef.reload_def([{
+    "id": "a",
+    "a": 2,
+    "b": "1",
+    "c": 1,
+    "d": 1.0,
+    "e": [],
+    "g": {},
+}])
+Assert(__tmp.a == 2)
 
 
 class __SampleSimpleNode(SimpleNode):

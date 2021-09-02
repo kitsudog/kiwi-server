@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session, sessionmaker, Query, scoped_session
 from sqlalchemy.orm.attributes import InstrumentedAttribute, flag_modified
 from sqlalchemy.pool import QueuePool
 
-import config
 from base.style import is_debug, Log, is_dev, T, Assert, Fail, Block, clone_json, json_str
+from base.utils import load_module
 
 db = SQLAlchemy()
 
@@ -365,121 +365,126 @@ class BaseEnum(enum.Enum):
 session_maker_map = {}  # type: Dict[str, sessionmaker]
 
 
+# noinspection PyShadowingNames
 def init_maker():
     # noinspection PyProtectedMember
     from sqlalchemy.dialects import plugins
     plugins.register("PoolHookPlugin", "frameworks.sql_model_plugin", "PoolHookPlugin")
-    for k, v in config.SQLALCHEMY_BINDS.items():
-        session_maker_map[k] = sessionmaker(
-            bind=create_engine(
-                v,
-                case_sensitive=True,
-                # if False, result column names will match in a case-insensitive fashion, that is, row['SomeColumn'].
-                convert_unicode=False,
-                # if set to True, causes all String datatypes to act as though the String.convert_unicode flag has been
-                # set to True, regardless of a setting of False on an individual String type. This has the effect of
-                # causing all String -based columns to accommodate Python Unicode objects directly as though the
-                # datatype were the Unicode type.
-                echo=is_dev(),
-                # if True, the Engine will log all statements as well as a repr() of their parameter lists to the
-                # default log handler, which defaults to sys.stdout for output. If set to the string "debug", result
-                # rows will be printed to the standard output as well. The echo attribute of Engine can be modified at
-                # any time to turn logging on and off; direct control of logging is also available using the standard
-                # Python logging module.
-                echo_pool=is_debug(),
-                # if True, the connection pool will log informational output such as when connections are invalidated as
-                # well as when connections are recycled to the default log handler, which defaults to sys.stdout for
-                # output. If set to the string "debug", the logging will include pool checkouts and checkins. Direct
-                # control of logging is also available using the standard Python logging module.
-                encoding="utf8",
-                # Defaults to utf-8. This is the string encoding used by SQLAlchemy for string encode/decode operations
-                # which occur within SQLAlchemy, outside of the DBAPIs own encoding facilities.
-                isolation_level="READ_UNCOMMITTED",
-                # this string parameter is interpreted by various dialects in order to affect the transaction isolation
-                # level of the database connection. The parameter essentially accepts some subset of these string
-                # arguments: "SERIALIZABLE", "REPEATABLE READ", "READ COMMITTED", "READ UNCOMMITTED" and "AUTOCOMMIT".
-                # Behavior here varies per backend, and individual dialects should be consulted directly.
-                #
-                # Note that the isolation level can also be set on a per-Connection basis as well, using the Connection.
-                # execution_options.isolation_level feature.
-                json_deserializer=json.loads,
-                # for dialects that support the JSON datatype, this is a Python callable that will convert a JSON string
-                # to a Python object. By default, the Python json.loads function is used.
-                json_serializer=json_str,
-                # for dialects that support the JSON datatype, this is a Python callable that will render a given object
-                # as JSON. By default, the Python json.dumps function is used.
-                listeners=[],
-                # A list of one or more PoolListener objects which will receive connection pool events.
-                logging_name=None,
-                # String identifier which will be used within the “name” field of logging records generated within the
-                # “sqlalchemy.engine” logger. Defaults to a hexstring of the object’s id.
-                max_overflow=10,
-                # the number of connections to allow in connection pool “overflow”, that is connections that can be
-                # opened above and beyond the pool_size setting, which defaults to five. this is only used with
-                # QueuePool.
-                module=None,
-                # eference to a Python module object (the module itself, not its string name). Specifies an alternate
-                # DBAPI module to be used by the engine’s dialect. Each sub-dialect references a specific DBAPI which
-                # will be imported before first connect. This parameter causes the import to be bypassed, and the
-                # given module to be used instead. Can be used for testing of DBAPIs as well as to inject “mock” DBAPI
-                # implementations into the Engine.
-                paramstyle=None,
-                # The paramstyle to use when rendering bound parameters. This style defaults to the one recommended by
-                # the DBAPI itself, which is retrieved from the .paramstyle attribute of the DBAPI. However, most DBAPIs
-                # accept more than one paramstyle, and in particular it may be desirable to change a “named” paramstyle
-                # into a “positional” one, or vice versa. When this attribute is passed, it should be one of the values
-                # "qmark", "numeric", "named", "format" or "pyformat", and should correspond to a parameter style known
-                # to be supported by the DBAPI in use.
-                pool=None,
-                # an already-constructed instance of Pool, such as a QueuePool instance. If non-None, this pool will be
-                # used directly as the underlying connection pool for the engine, bypassing whatever connection
-                # parameters are present in the URL argument. For information on constructing connection pools
-                # manually, see Connection Pooling.
-                poolclass=QueuePool,
-                # a Pool subclass, which will be used to create a connection pool instance using the connection
-                # parameters given in the URL. Note this differs from pool in that you don’t actually instantiate the
-                # pool in this case, you just indicate what type of pool to be used.
-                pool_logging_name=None,
-                # String identifier which will be used within the “name” field of logging records generated within the
-                # “sqlalchemy.pool” logger. Defaults to a hexstring of the object’s id.
-                pool_pre_ping=True,
-                # boolean, if True will enable the connection pool “pre-ping” feature that tests connections for
-                # liveness upon each checkout.
-                pool_size=5,
-                # the number of connections to keep open inside the connection pool. This used with QueuePool as well as
-                # SingletonThreadPool. With QueuePool, a pool_size setting of 0 indicates no limit; to disable pooling,
-                # set poolclass to NullPool instead.
-                pool_recycle=3000,
-                # this setting causes the pool to recycle connections after the given number of seconds has passed. It
-                # defaults to -1, or no timeout. For example, setting to 3600 means connections will be recycled after
-                # one hour. Note that MySQL in particular will disconnect automatically if no activity is detected on a
-                # connection for eight hours (although this is configurable with the MySQLDB connection itself and the
-                # server configuration as well).
-                pool_reset_on_return='rollback',
-                # set the Pool.reset_on_return parameter of the underlying Pool object, which can be set to the values
-                # "rollback", "commit", or None.
-                pool_timeout=3,
-                # number of seconds to wait before giving up on getting a connection from the pool. This is only used
-                # with QueuePool.
-                pool_use_lifo=False,
-                # use LIFO (last-in-first-out) when retrieving connections from QueuePool instead of FIFO
-                # (first-in-first-out). Using LIFO, a server-side timeout scheme can reduce the number of connections
-                # used during non- peak periods of use. When planning for server-side timeouts, ensure that a recycle or
-                # pre-ping strategy is in use to gracefully handle stale connections.
-                plugins=['PoolHookPlugin'],
-                # string list of plugin names to load. See CreateEnginePlugin for background.
-                strategy='plain',
-                # selects alternate engine implementations. Currently available are:
-                #
-                # the threadlocal strategy, which is described in Using the Threadlocal Execution Strategy;
-                #
-                # the mock strategy, which dispatches all statement execution to a function passed as the argument
-                # executor. See example in the FAQ.
-                # executor=None,
-                # a function taking arguments (sql, *multiparams, **params), to which the mock strategy will dispatch
-                # all statement execution. Used only by strategy='mock'.
-            ), expire_on_commit=False
-        )
+    if config := load_module("config", fail=False):
+        for k, v in config.SQLALCHEMY_BINDS.items():
+            session_maker_map[k] = sessionmaker(
+                bind=create_engine(
+                    v,
+                    case_sensitive=True,
+                    # if False, result column names will match in a case-insensitive fashion, that is,
+                    # row['SomeColumn'].
+                    convert_unicode=False,
+                    # if set to True, causes all String datatypes to act as though the String.convert_unicode flag has
+                    # been set to True, regardless of a setting of False on an individual String type. This has the
+                    # effect of causing all String -based columns to accommodate Python Unicode objects directly as
+                    # though the datatype were the Unicode type.
+                    echo=is_dev(),
+                    # if True, the Engine will log all statements as well as a repr() of their parameter lists to the
+                    # default log handler, which defaults to sys.stdout for output. If set to the string "debug", result
+                    # rows will be printed to the standard output as well. The echo attribute of Engine can be modified
+                    # at any time to turn logging on and off; direct control of logging is also available using the
+                    # standard Python logging module.
+                    echo_pool=is_debug(),
+                    # if True, the connection pool will log informational output such as when connections are
+                    # invalidated as well as when connections are recycled to the default log handler, which defaults
+                    # to sys.stdout for output. If set to the string "debug", the logging will include pool checkouts
+                    # and checkins. Direct control of logging is also available using the standard Python logging
+                    # module.
+                    encoding="utf8",
+                    # Defaults to utf-8. This is the string encoding used by SQLAlchemy for string encode/decode
+                    # operations which occur within SQLAlchemy, outside of the DBAPIs own encoding facilities.
+                    isolation_level="READ_UNCOMMITTED",
+                    # this string parameter is interpreted by various dialects in order to affect the transaction
+                    # isolation level of the database connection. The parameter essentially accepts some subset of
+                    # these string arguments: "SERIALIZABLE", "REPEATABLE READ", "READ COMMITTED", "READ UNCOMMITTED"
+                    # and "AUTOCOMMIT". Behavior here varies per backend, and individual dialects should be consulted
+                    # directly.
+                    #
+                    # Note that the isolation level can also be set on a per-Connection basis as well, using the
+                    # Connection. execution_options.isolation_level feature.
+                    json_deserializer=json.loads,
+                    # for dialects that support the JSON datatype, this is a Python callable that will convert a JSON
+                    # string to a Python object. By default, the Python json.loads function is used.
+                    json_serializer=json_str,
+                    # for dialects that support the JSON datatype, this is a Python callable that will render a given
+                    # object as JSON. By default, the Python json.dumps function is used.
+                    listeners=[],
+                    # A list of one or more PoolListener objects which will receive connection pool events.
+                    logging_name=None,
+                    # String identifier which will be used within the “name” field of logging records generated within
+                    # the “sqlalchemy.engine” logger. Defaults to a hexstring of the object’s id.
+                    max_overflow=10,
+                    # the number of connections to allow in connection pool “overflow”, that is connections that can be
+                    # opened above and beyond the pool_size setting, which defaults to five. this is only used with
+                    # QueuePool.
+                    module=None,
+                    # eference to a Python module object (the module itself, not its string name). Specifies an
+                    # alternate DBAPI module to be used by the engine’s dialect. Each sub-dialect references a specific
+                    # DBAPI which will be imported before first connect. This parameter causes the import to be
+                    # bypassed, and the given module to be used instead. Can be used for testing of DBAPIs as well as
+                    # to inject “mock” DBAPI implementations into the Engine.
+                    paramstyle=None,
+                    # The paramstyle to use when rendering bound parameters. This style defaults to the one recommended
+                    # by the DBAPI itself, which is retrieved from the .paramstyle attribute of the DBAPI. However, most
+                    # DBAPIs accept more than one paramstyle, and in particular it may be desirable to change a “named”
+                    # paramstyle into a “positional” one, or vice versa. When this attribute is passed, it should be one
+                    # of the values "qmark", "numeric", "named", "format" or "pyformat", and should correspond to a
+                    # parameter style known to be supported by the DBAPI in use.
+                    pool=None,
+                    # an already-constructed instance of Pool, such as a QueuePool instance. If non-None, this pool will
+                    # be used directly as the underlying connection pool for the engine, bypassing whatever connection
+                    # parameters are present in the URL argument. For information on constructing connection pools
+                    # manually, see Connection Pooling.
+                    poolclass=QueuePool,
+                    # a Pool subclass, which will be used to create a connection pool instance using the connection
+                    # parameters given in the URL. Note this differs from pool in that you don’t actually instantiate
+                    # the pool in this case, you just indicate what type of pool to be used.
+                    pool_logging_name=None,
+                    # String identifier which will be used within the “name” field of logging records generated within
+                    # the “sqlalchemy.pool” logger. Defaults to a hexstring of the object’s id.
+                    pool_pre_ping=True,
+                    # boolean, if True will enable the connection pool “pre-ping” feature that tests connections for
+                    # liveness upon each checkout.
+                    pool_size=5,
+                    # the number of connections to keep open inside the connection pool. This used with QueuePool as
+                    # well as SingletonThreadPool. With QueuePool, a pool_size setting of 0 indicates no limit; to
+                    # disable pooling, set poolclass to NullPool instead.
+                    pool_recycle=3000,
+                    # this setting causes the pool to recycle connections after the given number of seconds has passed.
+                    # It defaults to -1, or no timeout. For example, setting to 3600 means connections will be recycled
+                    # one hour. Note that MySQL in particular will disconnect automatically if no activity is detected
+                    # on a connection for eight hours (although this is configurable with the MySQLDB connection itself
+                    # and the server configuration as well).
+                    pool_reset_on_return='rollback',
+                    # set the Pool.reset_on_return parameter of the underlying Pool object, which can be set to the
+                    # values "rollback", "commit", or None.
+                    pool_timeout=3,
+                    # number of seconds to wait before giving up on getting a connection from the pool. This is only
+                    # used with QueuePool.
+                    pool_use_lifo=False,
+                    # use LIFO (last-in-first-out) when retrieving connections from QueuePool instead of FIFO
+                    # (first-in-first-out). Using LIFO, a server-side timeout scheme can reduce the number of
+                    # connections used during non- peak periods of use. When planning for server-side timeouts, ensure
+                    # that a recycle or pre-ping strategy is in use to gracefully handle stale connections.
+                    plugins=['PoolHookPlugin'],
+                    # string list of plugin names to load. See CreateEnginePlugin for background.
+                    strategy='plain',
+                    # selects alternate engine implementations. Currently available are:
+                    #
+                    # the threadlocal strategy, which is described in Using the Threadlocal Execution Strategy;
+                    #
+                    # the mock strategy, which dispatches all statement execution to a function passed as the argument
+                    # executor. See example in the FAQ.
+                    # executor=None,
+                    # a function taking arguments (sql, *multiparams, **params), to which the mock strategy will
+                    # dispatch all statement execution. Used only by strategy='mock'.
+                ), expire_on_commit=False
+            )
 
 
 init_maker()
@@ -508,4 +513,5 @@ def __init_models():
 __init_models()
 sql_alchemy_metadata = db.metadata
 print(f"tables[{','.join(sorted(sql_alchemy_metadata.tables.keys()))}]")
-sql_alchemy_binds = config.SQLALCHEMY_BINDS
+if config := load_module("config", fail=False):
+    sql_alchemy_binds = config.SQLALCHEMY_BINDS
