@@ -23,8 +23,8 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
-    has_sentry
-from base.utils import read_file, flatten, load_module
+    has_sentry, json_str
+from base.utils import read_file, flatten, load_module, write_file
 from frameworks.actions import Action
 from frameworks.base import Request
 from frameworks.context import Server
@@ -371,6 +371,13 @@ def _main(mode: Iterable[str]):
     active_console()
     Log("初始化服务器")
     with Block("启动服务器"):
+        if not os.path.exists("conf/module.conf"):
+            os.makedirs("conf", exist_ok=True)
+            write_file("conf/module.conf", json_str({
+                "main": [
+                    "core",
+                ]
+            }, pretty=True).encode("utf8"))
         module_conf: Dict = eval(read_file("conf/module.conf"))
         if full_module := os.environ.get("FULL_MODULE"):
             Log(f"外部指定加载的模块[{full_module}]")
