@@ -66,9 +66,11 @@ from frameworks.sql_model import db
 # pretty_errors.replace_stderr()
 # pretty_errors.blacklist(os.path.join(os.path.dirname(__file__), 'venv'))
 
-if config := load_module("config", fail=False):
+if config := load_module("config", fail=False, log_fail=False):
     TAG = config.TAG
+    MYSQL_SUPPORT = False
 else:
+    MYSQL_SUPPORT = True
     TAG = os.environ.get("TAG", "dev")
 
 if has_sentry():
@@ -438,7 +440,8 @@ def test():
         from frameworks import node_sample
 
         action_sample.test()
-        db_sample.test()
+        if not MYSQL_SUPPORT:
+            db_sample.test()
         node_sample.test()
 
 

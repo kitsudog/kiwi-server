@@ -370,7 +370,7 @@ def init_maker():
     # noinspection PyProtectedMember
     from sqlalchemy.dialects import plugins
     plugins.register("PoolHookPlugin", "frameworks.sql_model_plugin", "PoolHookPlugin")
-    if config := load_module("config", fail=False):
+    if config := load_module("config", fail=False, log_fail=False):
         for k, v in config.SQLALCHEMY_BINDS.items():
             session_maker_map[k] = sessionmaker(
                 bind=create_engine(

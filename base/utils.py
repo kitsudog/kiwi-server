@@ -59,8 +59,8 @@ def dump_func(func):
         return "未知的代码[%s]" % type(func)
 
 
-def load_module(full_name, fail=True):
-    with Block(f"load_module[{full_name}]", fail=fail):
+def load_module(full_name, fail=True, log_fail=True):
+    with Block(f"load_module[{full_name}]", fail=fail, log_fail=log_fail):
         if full_name not in sys.modules:
             Log(f"加载模块[{full_name}]")
             exec(f"import {full_name}")
