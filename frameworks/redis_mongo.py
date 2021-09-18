@@ -80,8 +80,10 @@ def _mongo(cate):
         exit(1)
     if len(auth):
         auth = "%s@" % auth
+    url = 'mongodb://%s%s:%s/' % (auth, host, port)
+    Log(f"链接mongo[{url}]")
     db = pymongo.MongoClient(
-        'mongodb://%s%s:%s/' % (auth, host, port),
+        url,
         socketTimeoutMS=2000,
         connectTimeoutMS=1000,
         serverSelectionTimeoutMS=1000,

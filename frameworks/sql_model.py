@@ -485,6 +485,8 @@ def init_maker():
                     # dispatch all statement execution. Used only by strategy='mock'.
                 ), expire_on_commit=False
             )
+    else:
+        Log("no config")
 
 
 init_maker()
@@ -500,18 +502,18 @@ def _sql_session(schema: str) -> Session:
 
 
 def __init_models():
-    print("__init_models")
+    Log("__init_models")
     for root, _, files in os.walk("modules", followlinks=True):
         for each in files:
             if each == "models.py":
-                print(f"load models[{root}]")
+                Log(f"load models[{root}]")
                 exec(f"import {root.replace('/', '.')}.{each[:-3]}")
-    print("__init_models over")
+    Log("__init_models over")
 
 
 # 为了激活migrate准备的
 __init_models()
 sql_alchemy_metadata = db.metadata
-print(f"tables[{','.join(sorted(sql_alchemy_metadata.tables.keys()))}]")
-if config := load_module("config", fail=False):
+Log(f"tables[{','.join(sorted(sql_alchemy_metadata.tables.keys()))}]")
+if config := load_module("config", fail=False, log_fail=False):
     sql_alchemy_binds = config.SQLALCHEMY_BINDS

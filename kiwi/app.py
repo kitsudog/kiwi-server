@@ -182,11 +182,13 @@ if has_sentry():
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
+app.debug = is_dev()
 if config:
     app.config.from_object(config)
-db.init_app(app)
-app.debug = is_dev()
-migrate = Migrate(app, db)
+    db.init_app(app)
+    migrate = Migrate(app, db)
+else:
+    pass
 mimetypes.add_type('text/css; charset=utf-8', '.css')
 
 

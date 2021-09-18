@@ -61,7 +61,7 @@ def feature2():
         "field3": True,
         "field4": [],
     }, ignore_version=True)
-    node.save()
+    node.save(mongo_right_now=True)
     return {
         "data": node,
     }
