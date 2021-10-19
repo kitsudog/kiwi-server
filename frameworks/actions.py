@@ -845,7 +845,7 @@ class Action(FastAction):
                 ret.update({
                     "param": e.params,
                 })
-            if not self.__class__ == Action:
+            if not issubclass(self.__class__, Action):
                 # 为后续的框架保留可能
                 raise e
             response = Response(e.error_id, ret)

@@ -161,7 +161,7 @@ table tr:nth-child(even)
 
 
 @GetAction
-def api_log(api: str):
+def api_log(__params, api: str):
     """
     api历史记录方便调试
     """
@@ -187,8 +187,9 @@ def api_log(api: str):
                         break
             elif isinstance(result, str):
                 pass
+        __raw = __params["#raw#"]
         example = f"""\
-curl http://server.laifafawu.com/{api.replace('.', '/')} -X POST -v \\
+curl {__raw['wsgi.url_scheme']}://{__raw['HTTP_HOST']}/{api.replace('.', '/')} -X POST -v \\
     --data-raw '{api_log_list[0]["req"]}'
 """
     else:
