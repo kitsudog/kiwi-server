@@ -1,8 +1,9 @@
 import re
+import time
 
 from base.style import str_json, json_str, str_json_i, Block, is_debug
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE
-from frameworks.base import HTMLPacket
+from frameworks.base import HTMLPacket, ChunkPacket
 from frameworks.context import DefaultRouter
 from frameworks.redis_mongo import db_other
 from frameworks.server_context import SessionContext
@@ -384,3 +385,13 @@ def login0(__session: SessionContext, uuid: str):
     return {
         "token": __session.get_token(),
     }
+
+
+@GetAction
+def chunk():
+    def generator():
+        for _ in range(10):
+            time.sleep(1)
+            yield f"line[{_}]".encode("utf8")
+
+    return ChunkPacket(generator())

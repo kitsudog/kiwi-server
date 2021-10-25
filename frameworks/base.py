@@ -1,7 +1,7 @@
 import json
 import time
 from abc import abstractmethod
-from typing import Optional, List, Dict, TYPE_CHECKING, Callable
+from typing import Optional, List, Dict, TYPE_CHECKING, Callable, Generator
 
 from base.style import Fail, ExJSONEncoder, json_str, is_debug
 from base.utils import base64
@@ -34,6 +34,9 @@ class IPacket(object):
     def status_code(self) -> int:
         return 200
 
+    def chunk_stream(self) -> Optional[Generator]:
+        return None
+
     @abstractmethod
     def to_write_data(self) -> bytes:
         pass
@@ -47,6 +50,26 @@ class HTTPPacket(IPacket):
     @abstractmethod
     def to_write_data(self) -> bytes:
         pass
+
+
+class ChunkPacket(HTTPPacket):
+    def to_write_data(self) -> bytes:
+        return b""
+
+    def status_code(self) -> int:
+        return self.status
+
+    def content_type(self) -> bytes:
+        return self.__content_type
+
+    def __init__(self, stream: Generator[bytes, None, None], content_type: str = "text/html; charset=UTF-8",
+                 status=200):
+        self.stream = stream
+        self.__content_type = content_type.encode("utf8")
+        self.status = status
+
+    def chunk_stream(self) -> Optional[Generator[bytes, None, None]]:
+        return self.stream
 
 
 class HTMLPacket(HTTPPacket):

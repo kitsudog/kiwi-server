@@ -428,24 +428,28 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                 ret.append(("Content-Type", rsp.content_type().decode()))
                 if is_debug():
                     ret.append(("debug", "true"))
-
-                content = rsp.to_write_data()
-                if len(content) > 200 and environ.get("HTTP_ACCEPT_ENCODING", "").find("gzip") >= 0:
-                    with Block("Gzip"):
-                        gzip_buffer = BytesIO()
-                        with GzipFile(mode='wb', compresslevel=6, fileobj=gzip_buffer, mtime=0) as zfile:
-                            zfile.write(content)
-                        content = gzip_buffer.getvalue()
-                        ret.append(("Content-Encoding", "gzip"))
-
                 if req.rsp_header is not None:
                     for k, v in req.rsp_header.items():
                         ret.append((k, v))
+
                 if rsp.status_code() == 200:
                     start_response('200 OK', ret)
                 else:
                     start_response('%s' % rsp.status_code(), ret)
-                return [content]
+
+                if chunk := rsp.chunk_stream():
+                    return iter(chunk)
+                else:
+                    content = rsp.to_write_data()
+                    if len(content) > 200 and environ.get("HTTP_ACCEPT_ENCODING", "").find("gzip") >= 0:
+                        with Block("Gzip"):
+                            gzip_buffer = BytesIO()
+                            with GzipFile(mode='wb', compresslevel=6, fileobj=gzip_buffer, mtime=0) as zfile:
+                                zfile.write(content)
+                            content = gzip_buffer.getvalue()
+                            ret.append(("Content-Encoding", "gzip"))
+
+                    return [content]
             except Exception as e:
                 if has_sentry():
                     from sentry_sdk import push_scope

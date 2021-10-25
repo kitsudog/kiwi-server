@@ -11,6 +11,7 @@ import mimetypes
 import os
 import random
 from datetime import datetime
+from time import sleep
 from typing import Iterable, Dict, TypedDict, List, Optional
 
 import click
@@ -180,7 +181,7 @@ if has_sentry():
     )
     Error("StartServer")
 
-app = Flask(__name__)
+app = Flask(__name__, root_path=os.path.curdir)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.debug = is_dev()
 if config:
@@ -232,20 +233,23 @@ def errorhandler(error):
 
 @app.after_request
 def after_request(response: Response):
-    content = response.get_data()
-    if content.startswith(b"{"):
-        ret = json.loads(content.decode("utf8"))
-        if "data" not in ret:
-            ret = {
-                "data": ret
-            }
-        if "code" not in ret:
-            ret["code"] = 0
-        # noinspection PyArgumentList
-        response.set_data(json.dumps(ret))
-        if is_dev() and request.method == "POST":
-            print(f"[C=>S] {request.path}", getattr(request, "params", {}))
-            print(f"[S=>C] {request.path}", response.get_data()[:100])
+    if response.is_streamed:
+        pass
+    else:
+        content = response.get_data()
+        if content.startswith(b"{"):
+            ret = json.loads(content.decode("utf8"))
+            if "data" not in ret:
+                ret = {
+                    "data": ret
+                }
+            if "code" not in ret:
+                ret["code"] = 0
+            # noinspection PyArgumentList
+            response.set_data(json.dumps(ret))
+            if is_dev() and request.method == "POST":
+                print(f"[C=>S] {request.path}", getattr(request, "params", {}))
+                print(f"[S=>C] {request.path}", response.get_data()[:100])
 
     return response
 
@@ -268,6 +272,17 @@ def download():
     filename = request.args["filename"]
     # 修正名字
     return send_from_directory("static", "." + request.args["path"], attachment_filename=filename, as_attachment=True)
+
+
+@app.route('/stream', methods=['GET'])
+def stream():
+    def generate():
+        for _ in range(100):
+            sleep(1)
+            yield f"line[{_}]"
+
+    from flask import stream_with_context
+    return Response(stream_with_context(generate()))
 
 
 @app.after_request
