@@ -195,6 +195,7 @@ class ChunkStream:
         self.__start = False
         self.__end = False
         self.__buffer = Queue()
+        self.__timeout = 30
 
     def __iter__(self):
         if not self.__start:
@@ -211,15 +212,19 @@ class ChunkStream:
 
             gevent.spawn(func)
         while not self.__end:
-            ret = self.__buffer.get(timeout=30)
+            ret = self.__buffer.get(timeout=self.__timeout)
             if ret is ChunkStream.OVER:
                 break
             elif ret:
                 yield ret
 
-    def write(self, data: bytes):
+    def timeout(self, value):
+        self.__timeout = value
+
+    def write(self, data: bytes, timeout=30):
         self.__buffer.put(data)
         gevent.sleep(0)
+        self.__timeout = timeout
 
     def Log(self, msg: str):
         self.__buffer.put((msg + "\n").encode("utf8"))
