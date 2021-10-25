@@ -10,7 +10,7 @@ from typing import Optional, Callable, Type, List, Iterable, Dict
 from base.style import Fail, Log, profiler_logger, FailError, Trace, T, str_json_a, Assert, NoThing, Block, str_json, \
     is_debug, SentryBlock
 from base.utils import DecorateHelper, dump_func, str_to_bool, base64decode, load_class, typing_inspect
-from frameworks.base import Request, Response, IPacket, TextResponse, ErrorResponse
+from frameworks.base import Request, Response, IPacket, TextResponse, ErrorResponse, ChunkPacket
 from frameworks.models import BaseDef
 from frameworks.sql_model import sql_session
 
@@ -636,6 +636,16 @@ class Action(FastAction):
             Assert(self.pattern.fullmatch(value), f"参数[alias={self.alias}]格式不匹配[{self.pattern}]")
             return value
 
+    class StreamInjector(Injector):
+        def __init__(self, type_hint: Optional[Type] = str, *, alias: str, default_value=NONE, param: str = None):
+            super().__init__(type_hint=type_hint, alias=alias, default_value=default_value, param=param)
+
+        def verify_param(self):
+            Assert(self.param == "__stream", "参数必须是__stream")
+
+        def from_req(self, req: Request) -> any:
+            return req.init_stream()
+
     __param_injector = {
         "__request": lambda request: request,
         "__req": lambda request: request,
@@ -794,7 +804,12 @@ class Action(FastAction):
                     if params[each.param] is NONE:
                         raise BusinessException(404, f"参数[{each.alias}]没有指定")
             with SentryBlock(op="Action", name=self.func_title) as span:
-                ret = self.func(**params)
+                if request.stream:
+                    request.stream.func = self.func
+                    request.stream.params = params
+                    ret = ChunkPacket(request.stream)
+                else:
+                    ret = self.func(**params)
                 if ret is None:
                     response = Response(0, {})
                     span.set_tag("ret", response.ret)
@@ -898,6 +913,22 @@ class GetAction(Action):
     def post_register(self, cmd: str, *, verbose=False):
         if verbose:
             Log(f"get handler[{cmd}]")
+
+
+# noinspection PyAttributeOutsideInit,PyMethodMayBeStatic
+class ChunkAction(Action):
+
+    def prepare(self):
+        if not hasattr(self, "prepared"):
+            super().prepare()
+            chunk_func = self.func
+
+            # noinspection PyTypeChecker
+            def func(*args, **kwargs):
+                return ChunkPacket(chunk_func(*args, **kwargs))
+
+            self.func = func
+            self.prepared = True
 
 
 def BAssert(expr: T, msg: str = "出现错误", *, internal_msg: Optional[str] = None, code=500, log=True) -> T:

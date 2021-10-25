@@ -3,7 +3,10 @@ import time
 from abc import abstractmethod
 from typing import Optional, List, Dict, TYPE_CHECKING, Callable, Generator
 
-from base.style import Fail, ExJSONEncoder, json_str, is_debug
+import gevent
+from gevent._gevent_cqueue import Queue
+
+from base.style import Fail, ExJSONEncoder, json_str, is_debug, Trace
 from base.utils import base64
 
 if TYPE_CHECKING:
@@ -68,7 +71,7 @@ class ChunkPacket(HTTPPacket):
         self.__content_type = content_type.encode("utf8")
         self.status = status
 
-    def chunk_stream(self) -> Optional[Generator[bytes, None, None]]:
+    def chunk_stream(self) -> Optional[Generator]:
         return self.stream
 
 
@@ -181,6 +184,48 @@ def empty_str_getter() -> str:
     return ""
 
 
+# noinspection PyMethodMayBeStatic
+class ChunkStream:
+    OVER = bytes()
+
+    def __init__(self, request: 'Request'):
+        self.request = request
+        self.func = None
+        self.params = None
+        self.__start = False
+        self.__end = False
+        self.__buffer = Queue()
+
+    def __iter__(self):
+        if not self.__start:
+            self.__start = True
+
+            def func():
+                try:
+                    self.func(**self.params)
+                except Exception as e:
+                    Trace("chunk流工作失败", e)
+                finally:
+                    self.__end = True
+                    self.__buffer.put(ChunkStream.OVER)
+
+            gevent.spawn(func)
+        while not self.__end:
+            ret = self.__buffer.get()
+            if ret is ChunkStream.OVER:
+                break
+            elif ret:
+                yield ret
+
+    def write(self, data: bytes):
+        self.__buffer.put(data)
+        gevent.sleep(0)
+
+    def Log(self, msg: str):
+        self.__buffer.put((msg + "\n").encode("utf8"))
+        gevent.sleep(0)
+
+
 class Request(JsonPacket):
     """
     服务器包装过的请求
@@ -206,6 +251,11 @@ class Request(JsonPacket):
         # cookie
         self.rsp_cookie = {}  # type: dict
         self.rsp_header = {}  # type: dict
+        self.stream = None
+
+    def init_stream(self):
+        self.stream = ChunkStream(self)
+        return self.stream
 
     @classmethod
     def json_dump(cls, params: Dict):

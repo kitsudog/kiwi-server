@@ -482,6 +482,7 @@ class DecorateHelper:
             装饰器有参数的时候后置初始化
             """
             pass
+        pass
 
     # noinspection PyMethodMayBeStatic
     def default_kwargs(self):

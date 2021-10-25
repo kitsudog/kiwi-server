@@ -432,12 +432,11 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     for k, v in req.rsp_header.items():
                         ret.append((k, v))
 
-                if rsp.status_code() == 200:
-                    start_response('200 OK', ret)
-                else:
-                    start_response('%s' % rsp.status_code(), ret)
-
                 if chunk := rsp.chunk_stream():
+                    if rsp.status_code() == 200:
+                        start_response('200 OK', ret)
+                    else:
+                        start_response('%s' % rsp.status_code(), ret)
                     return iter(chunk)
                 else:
                     content = rsp.to_write_data()
@@ -448,6 +447,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                 zfile.write(content)
                             content = gzip_buffer.getvalue()
                             ret.append(("Content-Encoding", "gzip"))
+                    if rsp.status_code() == 200:
+                        start_response('200 OK', ret)
+                    else:
+                        start_response('%s' % rsp.status_code(), ret)
 
                     return [content]
             except Exception as e:
