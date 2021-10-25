@@ -211,7 +211,7 @@ class ChunkStream:
 
             gevent.spawn(func)
         while not self.__end:
-            ret = self.__buffer.get()
+            ret = self.__buffer.get(timeout=30)
             if ret is ChunkStream.OVER:
                 break
             elif ret:
