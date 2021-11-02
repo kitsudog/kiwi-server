@@ -7,6 +7,7 @@ from io import BufferedReader, BytesIO
 from time import sleep
 from typing import List, Tuple, Optional, Iterable, Callable, Dict, Type
 
+import gevent
 import requests
 import sentry_sdk
 import simplejson
@@ -522,7 +523,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         return [b'500']
 
 
-def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=True) -> Tuple[int, Dict]:
+def forward(session: Optional[SessionContext],
+            cmd: str, param: Dict,
+            ok_only=True, wait_chunk=False,
+            ) -> Tuple[int, Dict]:
     # todo: 应该全异步操作避免`request`的`thread_local`污染
     if session is None:
         session = SessionMgr.guest_session()
@@ -532,6 +536,14 @@ def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=Tr
     SessionMgr.action_over(session, request, response)
     if isinstance(response, ChunkPacket):
         # PATCH:
+        def func():
+            for _ in response.chunk_stream():
+                pass
+
+        if wait_chunk:
+            func()
+        else:
+            gevent.spawn(func)
         return 0, {}
     if ok_only and response.ret != 0:
         raise BusinessException(response.ret, response.error, internal_msg=f"forward[{cmd}]执行失败")

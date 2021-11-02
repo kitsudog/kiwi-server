@@ -1,7 +1,7 @@
 import re
 import time
 
-from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail
+from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import HTMLPacket, ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
@@ -408,6 +408,7 @@ def chunk2(num: int, sleep=1):
 
 @GetAction
 def chunk3(__stream: ChunkStream, num: int, sleep=1, error=True, is_html=True):
+    Log("chunk3")
     if is_html:
         __stream.Log("<pre>")
     for _ in range(num):
