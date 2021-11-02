@@ -5,6 +5,7 @@ from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import HTMLPacket, ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
+from frameworks.main_server import forward
 from frameworks.redis_mongo import db_other
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
@@ -414,3 +415,8 @@ def chunk3(__stream: ChunkStream, num: int, sleep=1, error=True, is_html=True):
         __stream.Log(f"line[{_}]")
     if error:
         raise Fail("test")
+
+
+@GetAction
+def chunk4(__stream: ChunkStream):
+    forward(None, "dev.chunk3", {"num": 10})

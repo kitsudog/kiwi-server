@@ -21,7 +21,7 @@ from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_pr
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
-from .base import Request, IPacket, TextResponse, Response
+from .base import Request, IPacket, TextResponse, Response, ChunkPacket
 from .context import DefaultRouter, Server
 from .models import BaseNode, BaseSaveModel
 from .server_context import SessionContext
@@ -530,6 +530,9 @@ def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=Tr
     SessionMgr.action_start(session, request)
     response = DefaultRouter.do(request)
     SessionMgr.action_over(session, request, response)
+    if isinstance(response, ChunkPacket):
+        # PATCH:
+        return 0, {}
     if ok_only and response.ret != 0:
         raise BusinessException(response.ret, response.error, internal_msg=f"forward[{cmd}]执行失败")
     return response.ret, response.result
