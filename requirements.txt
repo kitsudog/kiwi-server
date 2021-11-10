@@ -14,7 +14,7 @@ uwsgi
 simplejson~=3.17.2
 Jinja2~=2.11.2
 pyjwt~=1.7.1
-Pillow~=8.0.1
+Pillow
 aliyun-python-sdk-core
 sentry-sdk
 python-dateutil~=2.8.1
