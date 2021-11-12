@@ -373,7 +373,7 @@ def startup(forever=True):
 
 # https://click.palletsprojects.com/en/7.x/options/
 @click.command()
-@click.option('--tag', help="启动标记而已", expose_value=False)
+@click.option('--tag', help="启动标记而已")
 @click.option('--mode', default=["full"], multiple=True,
               type=click.Choice(
                   ['full'] + list(filter(lambda x: os.path.isdir(f"modules/{x}"), os.listdir("modules")))
@@ -382,7 +382,7 @@ def main(**kwargs):
     if kwargs.get("tag"):
         global TAG
         TAG = kwargs["tag"]
-    _main(**kwargs)
+    _main(kwargs["mode"])
     startup()
 
 
