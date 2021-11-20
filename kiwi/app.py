@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from skywalking.trace.span import NoopSpan
 
 if __name__ == "__main__":
     from gevent import monkey
@@ -24,7 +25,7 @@ from flask_cors import CORS
 from flask_migrate import Migrate
 
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
-    has_sentry, json_str
+    has_sentry, json_str, init_sky_walking, has_sky_walking
 from base.utils import read_file, flatten, load_module, write_file
 from frameworks.actions import Action
 from frameworks.base import Request
@@ -73,7 +74,6 @@ if config := load_module("config", fail=False, log_fail=False):
 else:
     MYSQL_SUPPORT = True
     TAG = os.environ.get("TAG", "dev")
-
 if has_sentry():
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
@@ -180,20 +180,6 @@ if has_sentry():
         _experiments={"auto_enabling_integrations": True}
     )
     Error("StartServer")
-
-if os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES"):
-    # SW_AGENT_NAME
-    # SW_AGENT_INSTANCE
-    # SW_AGENT_NAMESPACE
-    # SW_AGENT_COLLECTOR_BACKEND_SERVICES
-    # SW_AGENT_PROTOCOL
-    # SW_AGENT_FORCE_TLS
-    # SW_AGENT_AUTHENTICATION
-    # SW_AGENT_LOGGING_LEVEL
-    from skywalking import agent, config
-
-    config.init()
-    agent.start()
 
 app = Flask(__name__, root_path=os.path.curdir)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
@@ -333,7 +319,13 @@ class FlaskWSGIAction:
 
     # noinspection PyListCreation
     def __call__(self, environ, start_response):
-        ret = wsgi_handler(environ, start_response, skip_status={404})
+        if has_sky_walking():
+            from skywalking.trace.context import get_context
+            carrier = None
+            with get_context().new_entry_span(op=environ["PATH_INFO"], carrier=carrier) as sw_span:
+                ret = wsgi_handler(environ, start_response, skip_status={404}, sw_span=sw_span)
+        else:
+            ret = wsgi_handler(environ, start_response, skip_status={404}, sw_span=NoopSpan())
         if ret == [b'404']:
             # 重新转发到flask
             return self.application(environ, start_response)
@@ -425,6 +417,7 @@ def _main(mode: Iterable[str]):
         with Block("检查所有模块models"):
             for entry in all_entry:
                 load_module("modules.%s.models" % entry)
+        init_sky_walking(os.environ.get("VIRTUAL_HOST", "".join(all_entry)))
         if is_debug():
             # 调试阶段随机初始化顺序依次破除顺序依赖
             random.shuffle(all_entry)

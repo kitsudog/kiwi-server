@@ -6,7 +6,7 @@ from frameworks.actions import GetAction, local_request, FastAction, Action, Cod
 from frameworks.base import HTMLPacket, ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
 from frameworks.main_server import forward
-from frameworks.redis_mongo import db_other
+from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
 
@@ -386,6 +386,12 @@ def login0(__session: SessionContext, uuid: str):
     return {
         "token": __session.get_token(),
     }
+
+
+@GetAction
+def redis_info():
+    Log("redis_info")
+    return db_config.info()
 
 
 @GetAction

@@ -11,7 +11,7 @@ import sentry_sdk
 from jwt import PyJWTError
 
 from base.interface import IService
-from base.style import Log, Fail, now, Block, is_debug, json_str, has_sentry
+from base.style import Log, Fail, now, Block, is_debug, json_str, has_sentry, SentryBlock
 from base.utils import random_str
 from frameworks.base import Request, Response, JsonPacket
 from frameworks.context import Server
@@ -134,35 +134,36 @@ class RedisSessionMgr(_SessionMgr):
 
     # noinspection PyBroadException
     def by_token(self, token, fail=True) -> SessionContext:
-        try:
-            data = jwt.decode(token, SESSION_KEY, algorithms=['HS256'])
-            if uuid := data.get("uuid"):
-                _json_data = db_session.get(f"session_uuid:{uuid}")
-            else:
-                _json_data = db_session.get(f"session_token:{token}")
-        except (PyJWTError, Exception):
-            Log(f"非法的token[{token}]")
-            token = self.new_token()
-            _json_data = ""
-        if _json_data and token in _json_data:
-            _session = self.__pool.get()
-            _session.from_json(json.loads(_json_data))
-            return _session
-        else:
-            if fail:
-                if _json_data:
-                    raise Fail(f"session失效了[{token=}]")
+        with SentryBlock(op="Session"):
+            try:
+                data = jwt.decode(token, SESSION_KEY, algorithms=['HS256'])
+                if uuid := data.get("uuid"):
+                    _json_data = db_session.get(f"session_uuid:{uuid}")
                 else:
-                    raise Fail(f"找不到指定的session[{token=}]")
-            else:
+                    _json_data = db_session.get(f"session_token:{token}")
+            except (PyJWTError, Exception):
+                Log(f"非法的token[{token}]")
+                token = self.new_token()
+                _json_data = ""
+            if _json_data and token in _json_data:
                 _session = self.__pool.get()
-                _json_data = deepcopy(self.__default_json)
-                _json_data["session_id"] = randint(SessionContext.MIN, SessionContext.MAX)
-                _json_data["token"] = token
-                _json_data["create"] = now()
-                _session.from_json(_json_data)
-                self.__save_session(_session)
+                _session.from_json(json.loads(_json_data))
                 return _session
+            else:
+                if fail:
+                    if _json_data:
+                        raise Fail(f"session失效了[{token=}]")
+                    else:
+                        raise Fail(f"找不到指定的session[{token=}]")
+                else:
+                    _session = self.__pool.get()
+                    _json_data = deepcopy(self.__default_json)
+                    _json_data["session_id"] = randint(SessionContext.MIN, SessionContext.MAX)
+                    _json_data["token"] = token
+                    _json_data["create"] = now()
+                    _session.from_json(_json_data)
+                    self.__save_session(_session)
+                    return _session
 
     def __del_session(self, token_or_uuid: str):
         db_session.delete(f"session_token:{token_or_uuid}", f"session_uuid:{token_or_uuid}")
@@ -186,28 +187,30 @@ class RedisSessionMgr(_SessionMgr):
             if not isinstance(response, JsonPacket):
                 return
             with Block("action记录", fail=False):
-                content = json_str({
-                    "req": Request.json_dump(request.params),
-                    "rsp": response.to_json(),
-                })
-                db_other.lpush(request.cmd, content)
-                if response.ret == 0:
-                    db_other.lpush(f"succ-{request.cmd}", content)
-                else:
-                    db_other.lpush(f"fail-{request.cmd}", content)
+                with SentryBlock(op="action记录"):
+                    content = json_str({
+                        "req": Request.json_dump(request.params),
+                        "rsp": response.to_json(),
+                    })
+                    db_other.lpush(request.cmd, content)
+                    if response.ret == 0:
+                        db_other.lpush(f"succ-{request.cmd}", content)
+                    else:
+                        db_other.lpush(f"fail-{request.cmd}", content)
                 if randint(0, 100) == 1:
-                    # 激活清理
-                    def trunc(key, length):
-                        cnt = max(0, db_other.llen(key) - length)
-                        if cnt:
-                            with db_other.pipeline() as db:
-                                for _ in range(cnt):
-                                    db.rpop(key)
-                                db.execute()
+                    with SentryBlock(op="action记录log清理"):
+                        # 激活清理
+                        def trunc(key, length):
+                            cnt = max(0, db_other.llen(key) - length)
+                            if cnt:
+                                with db_other.pipeline() as db:
+                                    for _ in range(cnt):
+                                        db.rpop(key)
+                                    db.execute()
 
-                    trunc(request.cmd, 1000)
-                    trunc(f"succ-{request.cmd}", 1000)
-                    trunc(f"fail-{request.cmd}", 1000)
+                        trunc(request.cmd, 1000)
+                        trunc(f"succ-{request.cmd}", 1000)
+                        trunc(f"fail-{request.cmd}", 1000)
 
     def cycle(self, _now):
         if self.__pool.qsize() < 10:

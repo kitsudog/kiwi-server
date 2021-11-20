@@ -16,9 +16,12 @@ from PIL import Image
 # noinspection PyProtectedMember
 from gevent.pywsgi import Input
 from jinja2 import Template
+from skywalking import Layer, Component
+from skywalking.trace.span import Span
+from skywalking.trace.tags import TagHttpMethod, TagHttpURL, TagHttpStatusCode
 
 from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
-    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock
+    profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock, has_sky_walking
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
@@ -229,7 +232,7 @@ class UUIDModelListInjector(Action.JsonArrayInjector):
 
 
 # noinspection DuplicatedCode,PyListCreation
-def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] = None):
+def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] = None, *, sw_span: Span):
     method = environ.get("REQUEST_METHOD")
     query_string = environ.get("QUERY_STRING", "")  # type:str
     cookies = environ.get("HTTP_COOKIE", "")  # type:str
@@ -239,6 +242,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
     content_type = environ.get("CONTENT_TYPE", "application/x-www-form-urlencoded")  # type: str
     content = ""
     params = {"#raw#": environ}
+    sw_span.layer = Layer.Http
+    sw_span.component = Component.Flask
+    sw_span.tag(TagHttpMethod(method))
+    sw_span.tag(TagHttpURL(path))
     if len(query_string):
         params.update(parse_form_url(query_string))
     if content_length:
@@ -264,84 +271,85 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     sleep(0.01)
             return buffer
 
-        if content_length > 20 * 1024 * 1024:
-            # 大文件上传
-            # 不做转码和预处理了只提供一个io流
-            _in = environ.get("wsgi.input")
-            if isinstance(_in, Input):
-                content = reader1(_in)
-                Assert(len(content) == content_length, "客户端上传数据超时/中断")
-            elif isinstance(_in, BufferedReader):
-                content = reader2(_in)
-                Assert(len(content) == content_length, "客户端上传数据超时/中断")
+        with SentryBlock(op="Bytes-Prepare"):
+            if content_length > 20 * 1024 * 1024:
+                # 大文件上传
+                # 不做转码和预处理了只提供一个io流
+                _in = environ.get("wsgi.input")
+                if isinstance(_in, Input):
+                    content = reader1(_in)
+                    Assert(len(content) == content_length, "客户端上传数据超时/中断")
+                elif isinstance(_in, BufferedReader):
+                    content = reader2(_in)
+                    Assert(len(content) == content_length, "客户端上传数据超时/中断")
+                else:
+                    raise Never()
             else:
-                raise Never()
-        else:
-            _in = environ.get("wsgi.input")
-            if isinstance(_in, Input):
-                content = reader1(_in)
-                Assert(len(content) == content_length, "客户端上传数据超时/中断")
-            elif isinstance(_in, BufferedReader):
-                content = reader2(_in)
-                Assert(len(content) == content_length, "客户端上传数据超时/中断")
+                _in = environ.get("wsgi.input")
+                if isinstance(_in, Input):
+                    content = reader1(_in)
+                    Assert(len(content) == content_length, "客户端上传数据超时/中断")
+                elif isinstance(_in, BufferedReader):
+                    content = reader2(_in)
+                    Assert(len(content) == content_length, "客户端上传数据超时/中断")
+                else:
+                    content = _in.readlines()
+                    content = b'\r\n'.join(content)
+                if content_type == "application/x-www-form-urlencoded":
+                    content = content.decode("utf-8")
+                elif content_type.startswith("application/json"):
+                    content = content.decode("utf-8")
+                elif content_type.startswith("text/plain"):
+                    content = content.decode("utf-8")
+                elif content_type.startswith("application/xml"):
+                    content = content.decode("utf-8")
+                    if not content.strip().startswith("<"):
+                        Log("xml的内容非法[%s]" % content.strip()[:100])
+                elif content_type.startswith("multipart/form-data;"):
+                    pass
+                else:
+                    Log("未知的提交类型[%s]" % content_type)
+            if isinstance(content, bytes):
+                # 提交的是文件数据
+                if content_type.startswith("multipart/form-data; boundary="):
+                    boundary = content_type[len("multipart/form-data; boundary="):].encode("utf-8")
+                    _sign = b"--%s" % boundary
+                    content_list = content.split(_sign + b"\r\n")[1:]  # type: List[bytes]
+                    _sign = _sign + b"--\r\n"
+                    if content_list[-1].endswith(_sign):
+                        content_list[-1] = content_list[-1][:-len(_sign)]
+                    _params_tmp = defaultdict(lambda: [])
+                    for each in content_list:
+                        i1 = each.find(b"\r\n")
+                        Assert(i1 > 0)
+                        content_start = each.find(b"\r\n\r\n") + 4
+                        head_line = each[:content_start - 4].decode("utf-8").splitlines()
+                        head_dict = dict(
+                            map(lambda kv: (kv[0].lower(), kv[1].strip()), map(lambda x: x.split(":"), head_line)))
+                        content_disposition = {}
+                        if head_dict["content-disposition"].strip().lower().startswith("form-data"):
+                            for k, v in map(lambda x: x.split("="), head_dict["content-disposition"].split(";")[1:]):
+                                k = k.strip().lower()
+                                if len(v) > 1 and v[0] == v[-1] and v[0] in "\"'":
+                                    v = v[1:-1]
+                                content_disposition[k] = v
+                                if k == "name":
+                                    raw_bytes = each[content_start:-2]
+                                    content_type = head_dict.get("content-type", "text").lower()
+                                    if content_type.endswith("octet-stream") or content_type.startswith("image/"):
+                                        _params_tmp[v].append(ActionBytes(raw_bytes))
+                                    else:
+                                        _params_tmp[v].append(raw_bytes.decode("utf-8"))
+                    for k, v in _params_tmp.items():
+                        if len(v) == 1:
+                            params[k] = v[0]
+                        else:
+                            params[k] = v
             else:
-                content = _in.readlines()
-                content = b'\r\n'.join(content)
-            if content_type == "application/x-www-form-urlencoded":
-                content = content.decode("utf-8")
-            elif content_type.startswith("application/json"):
-                content = content.decode("utf-8")
-            elif content_type.startswith("text/plain"):
-                content = content.decode("utf-8")
-            elif content_type.startswith("application/xml"):
-                content = content.decode("utf-8")
-                if not content.strip().startswith("<"):
-                    Log("xml的内容非法[%s]" % content.strip()[:100])
-            elif content_type.startswith("multipart/form-data;"):
-                pass
-            else:
-                Log("未知的提交类型[%s]" % content_type)
-        if isinstance(content, bytes):
-            # 提交的是文件数据
-            if content_type.startswith("multipart/form-data; boundary="):
-                boundary = content_type[len("multipart/form-data; boundary="):].encode("utf-8")
-                _sign = b"--%s" % boundary
-                content_list = content.split(_sign + b"\r\n")[1:]  # type: List[bytes]
-                _sign = _sign + b"--\r\n"
-                if content_list[-1].endswith(_sign):
-                    content_list[-1] = content_list[-1][:-len(_sign)]
-                _params_tmp = defaultdict(lambda: [])
-                for each in content_list:
-                    i1 = each.find(b"\r\n")
-                    Assert(i1 > 0)
-                    content_start = each.find(b"\r\n\r\n") + 4
-                    head_line = each[:content_start - 4].decode("utf-8").splitlines()
-                    head_dict = dict(
-                        map(lambda kv: (kv[0].lower(), kv[1].strip()), map(lambda x: x.split(":"), head_line)))
-                    content_disposition = {}
-                    if head_dict["content-disposition"].strip().lower().startswith("form-data"):
-                        for k, v in map(lambda x: x.split("="), head_dict["content-disposition"].split(";")[1:]):
-                            k = k.strip().lower()
-                            if len(v) > 1 and v[0] == v[-1] and v[0] in "\"'":
-                                v = v[1:-1]
-                            content_disposition[k] = v
-                            if k == "name":
-                                raw_bytes = each[content_start:-2]
-                                content_type = head_dict.get("content-type", "text").lower()
-                                if content_type.endswith("octet-stream") or content_type.startswith("image/"):
-                                    _params_tmp[v].append(ActionBytes(raw_bytes))
-                                else:
-                                    _params_tmp[v].append(raw_bytes.decode("utf-8"))
-                for k, v in _params_tmp.items():
-                    if len(v) == 1:
-                        params[k] = v[0]
-                    else:
-                        params[k] = v
-        else:
-            if content.startswith("{") and content.endswith("}"):
-                params.update(simplejson.loads(content))
-            else:
-                params.update(parse_form_url(content))
+                if content.startswith("{") and content.endswith("}"):
+                    params.update(simplejson.loads(content))
+                else:
+                    params.update(parse_form_url(content))
     params["#content#"] = content
     params["$__content"] = content
     path_list = path[1:].split("/")
@@ -363,7 +371,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
             Log("获取外网ip")
             params["$ip"] = ExprIP.search(requests.get("http://myip.ipip.net", timeout=3).text).group()
         pass
-
+    sw_span.peer = '%s:%s' % (_ip, environ["REMOTE_PORT"])
     if method == "GET":
         handler = DefaultRouter.GET_HANDLER.get(path, None)
         if not handler and len(path_list) > 2:
@@ -376,11 +384,14 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         ret.append(("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
         ret.append(("Access-Control-Allow-Headers", "*"))
         start_response('200 OK', ret)
+        sw_span.tag(TagHttpStatusCode(200))
         return [b""]
     elif method == "POST" or handler:
         if not handler:
             # 转到后续
             Log(f"not found post cmd[{path}]")
+            sw_span.error_occurred = True
+            sw_span.tag(TagHttpStatusCode(404))
             return [b'404']
         else:
             def get_session():
@@ -396,7 +407,8 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
             _session = get_session()
             req, rsp = None, None
             try:
-                req, rsp = packet_route(_session, cmd, params, wsgi_orig_getter(environ, params), action=handler)
+                req, rsp = packet_route(_session, cmd, params, wsgi_orig_getter(environ, params),
+                                        action=handler)
                 ret = []
                 with Block("CROS"):
                     ret.append(("Access-Control-Allow-Origin", "*"))
@@ -436,8 +448,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                 if chunk := rsp.chunk_stream():
                     if rsp.status_code() == 200:
                         start_response('200 OK', ret)
+                        sw_span.tag(TagHttpStatusCode(200))
                     else:
                         start_response('%s' % rsp.status_code(), ret)
+                        sw_span.tag(TagHttpStatusCode(rsp.status_code()))
                     return iter(chunk)
                 else:
                     content = rsp.to_write_data()
@@ -450,11 +464,16 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                             ret.append(("Content-Encoding", "gzip"))
                     if rsp.status_code() == 200:
                         start_response('200 OK', ret)
+                        sw_span.tag(TagHttpStatusCode(200))
                     else:
                         start_response('%s' % rsp.status_code(), ret)
+                        sw_span.tag(TagHttpStatusCode(rsp.status_code()))
 
                     return [content]
             except Exception as e:
+                if has_sky_walking():
+                    # TODO: SkyWalking
+                    pass
                 if has_sentry():
                     from sentry_sdk import push_scope
                     from sentry_sdk import capture_exception
@@ -463,12 +482,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                         # noinspection PyDunderSlots,PyUnresolvedReferences
                         scope.fingerprint = [_session, req, rsp]
                         capture_exception(e)
-                else:
-                    Catch(lambda: f"session={_session}")
-                    Catch(lambda: f"req={req}")
-                    Catch(lambda: f"rsp={rsp}")
-                    Trace("执行出现错误", e)
-                raise e
+                Catch(lambda: f"session={_session}")
+                Catch(lambda: f"req={req}")
+                Catch(lambda: f"rsp={rsp}")
+                Trace("执行出现错误", e, raise_e=True)
             finally:
                 SessionMgr.destroy(_session)
     elif method == "GET":
@@ -494,12 +511,16 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                         pass
                     else:
                         start_response('404 OK', [])
+                    sw_span.tag(TagHttpStatusCode(404))
+                    sw_span.error_occurred = True
                     return [b'404']
         else:
             if skip_status and 404 in skip_status:
                 pass
             else:
                 start_response('404 OK', [])
+            sw_span.tag(TagHttpStatusCode(404))
+            sw_span.error_occurred = True
             return [b'404']
 
         if len(content) > 200 and environ.get("HTTP_ACCEPT_ENCODING", "").find("gzip") >= 0:
@@ -513,13 +534,17 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         e_tag = md5bytes(content)
         if environ.get("HTTP_IF_NONE_MATCH") == e_tag:
             start_response("304", headers)
+            sw_span.tag(TagHttpStatusCode(304))
             return []
         else:
             headers.append(("etag", e_tag))
         start_response('200 OK', headers)
+        sw_span.tag(TagHttpStatusCode(200))
         return [content]
     else:
         start_response('500 OK', [])
+        sw_span.tag(TagHttpStatusCode(500))
+        sw_span.error_occurred = True
         return [b'500']
 
 

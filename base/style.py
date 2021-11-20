@@ -27,12 +27,12 @@ import zlib
 from abc import abstractmethod
 from collections import OrderedDict, ChainMap, defaultdict
 from copy import deepcopy
+from functools import partial
 from json import JSONEncoder
 from logging.handlers import TimedRotatingFileHandler
 from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn, DefaultDict
 
 import sentry_sdk
-from sentry_sdk.tracing import Span
 
 T = TypeVar('T')
 KT = TypeVar('KT')
@@ -51,6 +51,61 @@ if __SENTRY:
     except ImportError:
         print("no sentry[import sentry_sdk error]")
         __SENTRY = False
+if __SENTRY:
+    try:
+        exec("from sentry_sdk import capture_exception")
+        capture_exception = getattr(sys.modules["sentry_sdk"], "capture_exception")
+        add_breadcrumb = getattr(sys.modules["sentry_sdk"], "add_breadcrumb")
+        print(f"init sentry_sdk[{__SENTRY_DSN}]")
+    except ImportError:
+        print("no sentry[import sentry_sdk error]")
+        __SENTRY = False
+__SW_AGENT_COLLECTOR_BACKEND_SERVICES = os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES")
+__SKY_WALKING = False
+
+
+def init_sky_walking(human: str = "core"):
+    global __SKY_WALKING
+    if __SKY_WALKING or not __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
+        return
+    # https://skywalking.apache.org/docs/skywalking-python/latest/readme/
+    # https://skywalking.apache.org/docs/skywalking-python/latest/en/setup/envvars/
+    # SW_AGENT_NAME
+    # SW_AGENT_INSTANCE
+    # SW_AGENT_NAMESPACE
+    # SW_AGENT_COLLECTOR_BACKEND_SERVICES
+    # SW_AGENT_PROTOCOL
+    # SW_AGENT_FORCE_TLS
+    # SW_AGENT_AUTHENTICATION
+    # SW_AGENT_LOGGING_LEVEL
+    # SW_AGENT_LOG_REPORTER_ACTIVE
+    # SW_AGENT_LOG_REPORTER_LEVEL
+
+    # noinspection PyPackageRequirements
+    from skywalking import agent, config
+    config.init(
+        service_name=os.environ.get("SW_AGENT_NAME", "kiwi"),
+        service_instance=os.environ.get("SW_AGENT_INSTANCE", "dev"),
+        log_reporter_active=True, log_reporter_level="INFO"
+    )
+    Log(f"start skywalking[service_name={config.service_name}]"
+        f"[service_instance={config.service_instance}]"
+        f"[collector_address={config.collector_address}]"
+        f"[protocol={config.protocol}]")
+    agent.start()
+    from base.utils import my_ip
+    Error(f"StartServer[{human}@{my_ip()}]")
+    __SKY_WALKING = True
+
+
+if bool(__SW_AGENT_COLLECTOR_BACKEND_SERVICES):
+    try:
+        exec("from skywalking import agent, config")
+        print(
+            f"init skywalking[{__SW_AGENT_COLLECTOR_BACKEND_SERVICES}][{os.environ.get('SW_AGENT_PROTOCOL', 'grpc')}]")
+    except ImportError:
+        print("no skywalking[import skywalking error]")
+        __SKY_WALKING = False
 __TEST = os.environ.get("TEST", "FALSE").upper() == "TRUE"
 
 MINUTE_TS = 60 * 1000
@@ -321,6 +376,13 @@ def has_sentry() -> bool:
     return __SENTRY
 
 
+def has_sky_walking() -> bool:
+    """
+    sky_walking是可以负责追踪
+    """
+    return __SKY_WALKING
+
+
 def test_env() -> bool:
     """
     测试模式会有额外的账号功能等等
@@ -437,11 +499,42 @@ class ILock:
         pass
 
 
+class SkyWalkingTag:
+    def __init__(self, value, key="unknown"):
+        self.overridable = True
+        self.value = value
+        self.key = key
+
+
+__sw_tag_map = {
+
+}
+
+
+def get_sw_tag(tag):
+    ret = __sw_tag_map.get(tag)
+    if not ret:
+        __sw_tag_map[tag] = ret = partial(SkyWalkingTag, key=tag)
+    return ret
+
+
 class SentryBlock:
+    # noinspection PyPackageRequirements
     def __init__(self, *, op: str, name: str = None, description: str = None, sampled: bool = None, is_span=True,
                  no_sentry=False):
+        self.sw_span = None
+        if has_sky_walking():
+            # 嵌入skywalking
+            from skywalking.trace.context import get_context
+            from skywalking import Layer, Component
+            human = op if name is None else f"{op}[{name}]"
+            self.sw_span = get_context().new_local_span(op=human)
+            self.sw_span.layer = Layer.RPCFramework
+            self.sw_span.component = Component.Flask
+
         self.span = None
         if not has_sentry() or no_sentry:
+            from sentry_sdk.tracing import Span
             self.span = Span()
             return
         if is_span:
@@ -457,9 +550,16 @@ class SentryBlock:
                 self.span = sentry_sdk.start_transaction(op=op, name=name, description=description, sampled=sampled)
 
     def __enter__(self) -> sentry_sdk.tracing.Span:
+        if self.sw_span:
+            self.sw_span.__enter__()
         return self.span.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.sw_span:
+            from skywalking.trace.tags import TagHttpStatusCode
+            if self.span.status:
+                self.sw_span.tag(TagHttpStatusCode(self.span.status))
+            self.sw_span.__exit__(exc_type, exc_val, exc_tb)
         return self.span.__exit__(exc_type, exc_val, exc_tb)
 
 

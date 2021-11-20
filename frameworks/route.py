@@ -3,7 +3,7 @@ from typing import Callable, Dict, Optional, List
 
 import requests
 from base.interface import IMinService
-from base.style import Fail, Log, Assert, str_json, json_str, now
+from base.style import Fail, Log, Assert, str_json, json_str, now, has_sky_walking
 from frameworks.actions import FastAction
 from frameworks.base import Response, Request, ServerError
 from frameworks.redis_mongo import db_config

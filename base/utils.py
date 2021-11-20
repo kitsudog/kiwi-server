@@ -31,16 +31,30 @@ def re_find_1(pattern: str, string, fail=None) -> str:
     return ret[0]
 
 
-# noinspection PyUnresolvedReferences
+# noinspection PyBroadException
+def my_ip_cip():
+    req = urllib.request.Request("https://cip.cc")
+    req.add_header("User-Agent", "curl/7.77.0")
+    content = urllib.request.urlopen(req, timeout=1)
+    lines = list(map(lambda x: x.decode("utf8"), content.readlines()))
+    msg = lines[0]
+    return re_find_1(r"IP\s*: (\d+.\d+.\d+.\d+)", msg, fail="无法获取本机ip")
+
+
+# noinspection PyBroadException
 def my_ip():
     try:
-        req = urllib.request.Request("http://myip.ipip.net")
-        content = urllib.request.urlopen(req)
-        lines = list(map(lambda x: x.decode("utf8"), content.readlines()))
-        msg = lines[0]
-        return re_find_1(r"当前 IP：(\d+.\d+.\d+.\d+)", msg, fail="无法获取本机ip")
+        return my_ip_cip()
     except:
-        return "127.127.127.127"
+        try:
+            req = urllib.request.Request("https://ifconfig.me/ip")
+            req.add_header("User-Agent", "curl/7.77.0")
+            content = urllib.request.urlopen(req)
+            lines = list(map(lambda x: x.decode("utf8"), content.readlines()))
+            msg = lines[0]
+            return msg
+        except:
+            return "127.127.127.127"
 
 
 def dump_func(func):

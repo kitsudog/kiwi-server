@@ -843,6 +843,10 @@ class Action(FastAction):
                     else:
                         raise Fail("不支持的Action返回类型[%s][%s]" % (dump_func(self.func), ret_type))
                 framework(request, 0)
+                if isinstance(response, Response):
+                    span.status = response.ret
+                else:
+                    span.status = 0
             if profiler_logger is not None:
                 # noinspection PyProtectedMember
                 cost = time.time() - request._profiler_start
