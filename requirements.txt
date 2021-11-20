@@ -19,4 +19,5 @@ aliyun-python-sdk-core
 sentry-sdk
 python-dateutil~=2.8.1
 pretty-errors
+apache-skywalking
 

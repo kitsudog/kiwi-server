@@ -181,6 +181,20 @@ if has_sentry():
     )
     Error("StartServer")
 
+if os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES"):
+    # SW_AGENT_NAME
+    # SW_AGENT_INSTANCE
+    # SW_AGENT_NAMESPACE
+    # SW_AGENT_COLLECTOR_BACKEND_SERVICES
+    # SW_AGENT_PROTOCOL
+    # SW_AGENT_FORCE_TLS
+    # SW_AGENT_AUTHENTICATION
+    # SW_AGENT_LOGGING_LEVEL
+    from skywalking import agent, config
+
+    config.init()
+    agent.start()
+
 app = Flask(__name__, root_path=os.path.curdir)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.debug = is_dev()
