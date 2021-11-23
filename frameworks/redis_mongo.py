@@ -298,6 +298,33 @@ class DailyRedis:
     def hset(self, name, key=None, value=None, mapping=None):
         return self.__db.hset(f"{self._prefix()}|{name}", key, value=value, mapping=mapping)
 
+    def hincrby(self, name, key, amount=1):
+        return self.__db.hincrby(f"{self._prefix()}|{name}", key, amount)
+
+    def hincrbyfloat(self, name, key, amount=1.0):
+        return self.__db.hincrbyfloat(f"{self._prefix()}|{name}", key, amount)
+
+    def hkeys(self, name):
+        return self.__db.hkeys(f"{self._prefix()}|{name}")
+
+    def hlen(self, name):
+        return self.__db.hlen(f"{self._prefix()}|{name}")
+
+    def hsetnx(self, name, key, value):
+        return self.__db.hsetnx(f"{self._prefix()}|{name}", key, value)
+
+    def hmset(self, name, mapping):
+        return self.__db.hmset(f"{self._prefix()}|{name}", mapping)
+
+    def hmget(self, name, keys, *args):
+        return self.__db.hmget(f"{self._prefix()}|{name}", keys, *args)
+
+    def hvals(self, name):
+        return self.__db.hvals(f"{self._prefix()}|{name}")
+
+    def hstrlen(self, name, key):
+        return self.__db.hstrlen(f"{self._prefix()}|{name}", key)
+
     def lindex(self, name, index):
         return self.__db.lindex(f"{self._prefix()}|list|{name}", index)
 
