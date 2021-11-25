@@ -31,7 +31,7 @@ def re_find_1(pattern: str, string, fail=None) -> str:
     return ret[0]
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyUnresolvedReferences
 def my_ip_cip():
     req = urllib.request.Request("https://cip.cc")
     req.add_header("User-Agent", "curl/7.77.0")
@@ -41,11 +41,11 @@ def my_ip_cip():
     return re_find_1(r"IP\s*: (\d+.\d+.\d+.\d+)", msg, fail="无法获取本机ip")
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyUnresolvedReferences
 def my_ip():
     try:
         return my_ip_cip()
-    except:
+    except Exception:
         try:
             req = urllib.request.Request("https://ifconfig.me/ip")
             req.add_header("User-Agent", "curl/7.77.0")
@@ -53,7 +53,7 @@ def my_ip():
             lines = list(map(lambda x: x.decode("utf8"), content.readlines()))
             msg = lines[0]
             return msg
-        except:
+        except Exception:
             return "127.127.127.127"
 
 
@@ -437,12 +437,12 @@ def case_snake(camel_or_pascal: str) -> str:
     return camel_or_pascal
 
 
+# noinspection PyBroadException
 def dump_code_summary(code):
-    # noinspection PyBroadException
     try:
         with open(code.co_filename) as fin:
             line = fin.readlines()[code.co_firstlineno].strip()
-    except:
+    except Exception:
         line = code.co_name
     return "%s@[%s:%s]" % (line, code.co_filename.replace(os.path.abspath(os.curdir), ""), code.co_firstlineno)
 
@@ -540,7 +540,7 @@ class TypingHint(TypedDict):
 
 def typing_inspect(src: Union[type, str]) -> TypingHint:
     # noinspection PyUnresolvedReferences,PyProtectedMember
-    ret = re.findall(r"typing.([^[]+)\[(.+)\]", str(src))
+    ret = re.findall(r"typing.([^[]+)\[(.+)]", str(src))
     if ret:
         ret = ret[0]
         return TypingHint(

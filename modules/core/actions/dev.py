@@ -1,6 +1,8 @@
 import re
 import time
 
+import requests
+
 from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import HTMLPacket, ChunkPacket, ChunkStream
@@ -392,6 +394,13 @@ def login0(__session: SessionContext, uuid: str):
 def redis_info():
     Log("redis_info")
     return db_config.info()
+
+
+@GetAction
+def requests_test():
+    return requests.get("https://cip.cc", headers={
+        "User-Agent": "curl/7.77.0",
+    }).text
 
 
 @GetAction

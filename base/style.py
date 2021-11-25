@@ -82,10 +82,15 @@ def init_sky_walking(human: str = "core"):
     # SW_AGENT_LOG_REPORTER_LEVEL
 
     # noinspection PyPackageRequirements
+    if is_debug():
+        instance_name = "dev"
+    else:
+        from base.utils import my_ip
+        instance_name = f"{human}@{my_ip()}"
     from skywalking import agent, config
     config.init(
         service_name=os.environ.get("SW_AGENT_NAME", "kiwi"),
-        service_instance=os.environ.get("SW_AGENT_INSTANCE", "dev"),
+        service_instance=instance_name,
         log_reporter_active=True, log_reporter_level="INFO"
     )
     Log(f"start skywalking[service_name={config.service_name}]"
@@ -93,8 +98,7 @@ def init_sky_walking(human: str = "core"):
         f"[collector_address={config.collector_address}]"
         f"[protocol={config.protocol}]")
     agent.start()
-    from base.utils import my_ip
-    Error(f"StartServer[{human}@{my_ip()}]")
+    Error(f"StartServer[{instance_name}]")
     __SKY_WALKING = True
 
 
