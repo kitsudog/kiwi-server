@@ -67,23 +67,26 @@ def session_redis(index):
 
 
 def _mongo(cate):
-    host = os.environ.get("MONGO_HOST", "127.0.0.1")
-    port = os.environ.get("MONGO_PORT", "27017")
-    if port and re.compile(r"\d+").fullmatch(port):
-        port = int(port)
-    elif re.compile(r"tcp://[^:]+:\d+").fullmatch(port):
-        port = int(port.split(":")[-1])
-    auth = os.environ.get("MONGO_AUTH", "")
     name = os.environ.get("MONGO_NAME", "model")
-    if not host or not port:
-        Log(f"mongo配置错误[{host}:{port}]")
-        exit(1)
-    if len(auth):
-        auth = "%s@" % auth
-    url = f'mongodb://{auth}{host}:{port}/{name}'
-    Log(f"链接mongo[{url}]")
+    if uri := os.environ.get("MONGO_URI"):
+        name = uri.split("?")[0].split("/")[-1]
+    else:
+        host = os.environ.get("MONGO_HOST", "127.0.0.1")
+        port = os.environ.get("MONGO_PORT", "27017")
+        if port and re.compile(r"\d+").fullmatch(port):
+            port = int(port)
+        elif re.compile(r"tcp://[^:]+:\d+").fullmatch(port):
+            port = int(port.split(":")[-1])
+        auth = os.environ.get("MONGO_AUTH", "")
+        if not host or not port:
+            Log(f"mongo配置错误[{host}:{port}]")
+            exit(1)
+        if len(auth):
+            auth = "%s@" % auth
+        uri = f'mongodb://{auth}{host}:{port}/{name}'
+    Log(f"链接mongo[{uri}]")
     db = pymongo.MongoClient(
-        url,
+        uri,
         socketTimeoutMS=2000,
         connectTimeoutMS=1000,
         serverSelectionTimeoutMS=1000,
