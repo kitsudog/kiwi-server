@@ -67,12 +67,15 @@ def session_redis(index):
 
 
 def _mongo(cate):
-    name = os.environ.get("MONGO_NAME", "model")
     if uri := os.environ.get("MONGO_URI"):
-        name = uri.split("?")[0].split("/")[-1]
+        service, auth, username, password, host, _, port, name, query = re.compile(
+            r"mongodb([^:]*)://(([^:]+):([^@]+)?@)([^:]+)(:(\d+))?/([^?]*)\??(.*)"
+        ).fullmatch(uri).groups()
+        uri_human = f'mongodb://{host}:{port or 27017}/{name or os.environ.get("MONGO_NAME", "model")}'
     else:
         host = os.environ.get("MONGO_HOST", "127.0.0.1")
         port = os.environ.get("MONGO_PORT", "27017")
+        name = os.environ.get("MONGO_NAME", "model")
         if port and re.compile(r"\d+").fullmatch(port):
             port = int(port)
         elif re.compile(r"tcp://[^:]+:\d+").fullmatch(port):
@@ -84,7 +87,8 @@ def _mongo(cate):
         if len(auth):
             auth = "%s@" % auth
         uri = f'mongodb://{auth}{host}:{port}/{name}'
-    Log(f"链接mongo[{uri}]")
+        uri_human = f'mongodb://{host}:{port}/{name}'
+    Log(f"链接mongo[{uri_human}]")
     db = pymongo.MongoClient(
         uri,
         socketTimeoutMS=2000,
