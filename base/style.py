@@ -33,6 +33,7 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn, DefaultDict
 
 import sentry_sdk
+from skywalking.trace.context import get_context
 
 T = TypeVar('T')
 KT = TypeVar('KT')
@@ -62,10 +63,12 @@ if __SENTRY:
         __SENTRY = False
 __SW_AGENT_COLLECTOR_BACKEND_SERVICES = os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES")
 __SKY_WALKING = False
+__SW_AGENT_NAMESPACE = None
+__SW_IP = "127.0.0.1"
 
 
 def init_sky_walking(human: str = "core"):
-    global __SKY_WALKING
+    global __SKY_WALKING, __SW_IP, __SW_AGENT_NAMESPACE
     if __SKY_WALKING or not __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
         return
     # https://skywalking.apache.org/docs/skywalking-python/latest/readme/
@@ -82,12 +85,13 @@ def init_sky_walking(human: str = "core"):
     # SW_AGENT_LOG_REPORTER_LEVEL
 
     # noinspection PyPackageRequirements
+    from skywalking import agent, config
     if is_debug():
         instance_name = "dev"
     else:
         from base.utils import my_ip
+        __SW_IP = my_ip()
         instance_name = f"{human}@{my_ip()}"
-    from skywalking import agent, config
     config.init(
         service_name=os.environ.get("SW_AGENT_NAME", "kiwi"),
         service_instance=instance_name,
@@ -97,9 +101,43 @@ def init_sky_walking(human: str = "core"):
         f"[service_instance={config.service_instance}]"
         f"[collector_address={config.collector_address}]"
         f"[protocol={config.protocol}]")
+    __SW_AGENT_NAMESPACE = config.agent_namespace
+
     agent.start()
     Error(f"StartServer[{instance_name}]")
     __SKY_WALKING = True
+
+
+def get_sw8_header():
+    if not __SKY_WALKING:
+        return {}
+    if __SW_AGENT_NAMESPACE:
+        header = f"{__SW_AGENT_NAMESPACE}-sw8"
+    else:
+        header = "sw8"
+    if context := get_context():
+        segment = context.segment
+
+        def encode(src):
+            return base64.b64encode(src.encode('utf8'))
+
+        from skywalking import agent, config
+
+        return {
+            # 1-TRACEID-SEGMENTID-3-PARENT_SERVICE-PARENT_INSTANCE-PARENT_ENDPOINT-IPPORT
+            # 1-MzA5ZDllZWQtMzMzNC00MGQ4LWI2MDItMjc2MWRlMDgxMjBm-YmRhZjA2MDctZGJlMi00MTdiLWE1NjYtOGYzN2FjMTdjY2U5-0-a3ljLWJlPGJyb3dzZXI+-YnJvd3Nlci12MC41-L2hvbWVwYWdl-a3ljLWJlLmJlZTExMTEuY29t
+            # 1-[309d9eed-3334-40d8-b602-2761de08120f]-[bdaf0607-dbe2-417b-a566-8f37ac17cce9]-0-[kyc-be<browser>]-[browser-v0.5]-[/homepage]-[kyc-be.bee1111.com]
+            header: f"1-"
+                    f"{encode(segment.related_traces[0].value)}-"
+                    f"{encode(segment.segment_id.value)}-"
+                    f"0-"
+                    f"{encode(config.service_name)}-"
+                    f"{encode(config.service_instance)}-"
+                    f"{encode(__SW_IP)}-"
+                    f"{encode(__SW_IP)}"
+        }
+    else:
+        return {}
 
 
 if bool(__SW_AGENT_COLLECTOR_BACKEND_SERVICES):
