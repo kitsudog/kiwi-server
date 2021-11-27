@@ -231,6 +231,20 @@ class UUIDModelListInjector(Action.JsonArrayInjector):
         return ret
 
 
+__STATIC_FILES = {
+
+}
+
+
+def reg_static_file(static_root: str, path: str):
+    Assert(path not in __STATIC_FILES, f"static资源重复[{path}]")
+    __STATIC_FILES[path] = os.path.join(static_root, path[1:] if path[0] == "/" else path)
+
+
+def get_file_path(path: str):
+    return __STATIC_FILES.get(path, f"static{path}")
+
+
 # noinspection DuplicatedCode,PyListCreation
 def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] = None, *, sw_span: Span):
     method = environ.get("REQUEST_METHOD")
@@ -491,9 +505,11 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
     elif method == "GET":
         headers = [("Access-Control-Allow-Origin", "*")]
         if path == "/":
+            # 只允许index.html
             path = "/index.html"
-        file_path = f"static{path}"
-        if "." in file_path:
+        if "." in path:
+            # 只支持带有扩展名的
+            file_path = get_file_path(path)
             if os.path.isfile(file_path):
                 name, _, ext = file_path.rpartition(".")
                 if ext in {"html", "htm"}:

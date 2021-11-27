@@ -30,7 +30,7 @@ from base.utils import read_file, flatten, load_module, write_file
 from frameworks.actions import Action
 from frameworks.base import Request
 from frameworks.context import Server
-from frameworks.main_server import wsgi_handler, tick_cycle, service_cycle
+from frameworks.main_server import wsgi_handler, tick_cycle, service_cycle, reg_static_file
 from frameworks.sql_model import db
 
 # pretty_errors.configure(
@@ -425,6 +425,18 @@ def _main(mode: Iterable[str]):
             for entry in set(all_entry):
                 with Block(f"加载模块[{entry}]", log=True):
                     injector_list = []
+                    with Block("初始化静态资源"):
+                        # noinspection PyProtectedMember
+                        module_path = load_module("modules.%s" % entry).__path__._path[0]
+                        static_path = os.path.realpath(os.path.join(module_path, "static"))
+                        if os.path.exists(static_path):
+                            for root, _, files in os.walk(static_path):
+                                for file in files:
+                                    reg_static_file(
+                                        static_path,
+                                        os.path.join(root[len(static_path):], file),
+                                    )
+
                     with Block("初始化injector"):
                         # noinspection PyBroadException
                         try:
