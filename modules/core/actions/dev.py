@@ -1,167 +1,71 @@
 import re
 import time
+from collections import ChainMap
+from typing import List, Dict, Set
 
 import requests
 
-from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log
+from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
-from frameworks.base import HTMLPacket, ChunkPacket, ChunkStream
+from frameworks.base import ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
 from frameworks.main_server import forward
 from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
+from modules.core.utils import markdown_html
 
 
-def markdown_html(markdown: str, css: str) -> HTMLPacket:
-    return HTMLPacket(f"""\
-<!doctype html>
-<html>
-<head>
-    <link rel="icon" href="data:image/ico;base64,aWNv">
-    <meta charset="utf-8"/>
-    <title>api_list</title>
-</head>
-<body>
-    <div id="content">
-    <pre>
-{markdown}
-    </pre>
-    </div>
-    <!--<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
-    <script src="/js/showdown.min.js"></script>
-    <script src="/js/jquery-3.3.1.min.js"></script>
-    <script src="/js/jquery.json-viewer.js"></script>
-    <link href="/css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
-    <script>
-        var content = document.getElementById('content');
-        var markdown = content.getElementsByTagName("pre")[0].innerHTML;
-        // content.innerHTML = marked(markdown);
-    </script>
-    <script>
-        if(window.location.href.indexOf("debug")<0){{
-            var converter = new showdown.Converter({{
-                tables: true,
-                omitExtraWLInCodeBlocks: true,
-                noHeaderId: false,
-                parseImgDimensions: true,
-                simplifiedAutoLink: true,
-                literalMidWordUnderscores: true,
-                strikethrough: true,
-                tablesHeaderId: true,
-                ghCodeBlocks: true,
-                tasklists: true,
-                smoothLivePreview: true,
-                prefixHeaderId: false,
-                disableForced4SpacesIndentedSublists: false,
-                ghCompatibleHeaderId: true,
-                smartIndentationFix: false,
-                emoji: true,
-            }});
-            content.innerHTML = converter.makeHtml(markdown);
-            $("[name=json1]").each((i, each)=>{{
-                $(each).jsonViewer(JSON.parse(each.innerText), {{
-                  collapsed: true,
-                  rootCollapsable: true,
-                  withQuotes: true,
-                  withLinks: false,
-                }});
-            }});
-            $("[name=json2]").each((i, each)=>{{
-                try{{
-                    $(each).jsonViewer(JSON.parse(each.innerText), {{
-                      collapsed: true,
-                      rootCollapsable: false,
-                      withQuotes: true,
-                      withLinks: false,
-                    }});
-                }}catch(e){{
-                    console.log(e);
-                }}
-            }});
-            $("em").each((i,x)=>{{$(x).replaceWith("_" + $(x).text() + "_")}});
-        }}
-    </script>
+# noinspection PyStringFormat
+def td_format(header, value):
+    if isinstance(value, dict):
+        return f"<div name=json1>{json_str(value)}</div>"
+    else:
+        return f"%-{len(header)}s" % value
 
-</body>
-    <style>
-table
-{{
-    border-collapse: collapse;
-    margin: 0 auto;
-    text-align: center;
-    width: 100%;
-}}
-table td, table th
-{{
-    border: 2px solid #cad9ea;
-    color: #666;
-    vertical-align: top;
-}}
-table thead th
-{{
-    background-color: #CCE8EB;
-}}
-table tr:nth-child(odd)
-{{
-    background: #fff;
-}}
-table tr:nth-child(even)
-{{
-    background: #F5FAFA;
-}}
-.comment
-{{
-    font-size: small;
-}}
-.tooltip {{
-    position: relative;
-    display: inline-block;
-    border-bottom: 1px dotted black;
-}}
 
-.tooltip .tooltip-text {{
-    visibility: hidden;
-    width: 200px;
-    background-color: black;
-    color: #fff;
-    text-align: center;
-    border-radius: 6px;
-    padding: 5px 0;
+# noinspection PyDefaultArgument
+@GetAction
+def table_show(
+        header: List[str] = ["header-1", "header-2", "header-3", "header-4"],
+        table: List[Dict] = [
+            {"header-1": 1, "header-2": 2, "header-3": 3, "header-4": 4},
+            {"header-1": 5, "header-3": 7, "header-4": 8},
+        ],
+        row: List = [
+            ["c11", "c12", "c13", "c14"],
+            ["c21", "c22", "c23", "c24"],
+            ["c31", "c32", {"a": 1, "b": 2, "c": 3, "d": 4}],
+            [{"a": 1, "b": 2, "c": 3, "d": 4}, 2],
+        ],
+        alignment_center: Set[str] = {"header-2"},
+        alignment_right: Set[str] = {"header-3"},
+        default={"header-1": "a", "header-2": "b", "header-3": "c", "header-4": "d"},
+        css="",
+):
+    markdown = [f"|{'|'.join(header)}|"]
+    tmp = []
+    for h in header:
+        if h in alignment_center:
+            tmp.append(":-" + "-" * max(0, (len(h) - 4)) + "-:")
+        elif h in alignment_right:
+            tmp.append("-" * max(0, (len(h) - 4)) + "---:")
+        else:
+            tmp.append(":---" + "-" * max(0, (len(h) - 4)))
+    markdown.append("|%s|" % "|".join(tmp))
 
-    /* 定位 */
-    position: absolute;
-    z-index: 1;
-    top: -5px;
-    right: 105%;
-}}
+    for each in table:
+        tmp = []
+        for h in header:
+            tmp.append(td_format(h, each.get(h, default.get(h))))
+        markdown.append("|%s|" % "|".join(tmp))
+    for each in row:
+        tmp = []
+        for i, h in enumerate(header):
+            tmp.append(td_format(h, default.get(header[i]) if i >= len(each) else each[i]))
+        markdown.append("|%s|" % "|".join(tmp))
 
-.tooltip:hover .tooltip-text {{
-    visibility: visible;
-}}
-
-.tooltip .tooltip-text::after {{
-    content: " ";
-    position: absolute;
-    top: 50%;
-    left: 100%; /* 提示工具右侧 */
-    margin-top: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: transparent transparent transparent black;
-}}
-.tooltip .tooltip-text {{
-    opacity: 0;
-    transition: opacity 0.3s;
-}}
-
-.tooltip:hover .tooltip-text {{
-    opacity: 1;
-}}
-{css}
-    </style>
-</html>
-""")
+    return markdown_html("\n".join(markdown), css)
 
 
 @GetAction
@@ -398,9 +302,9 @@ def redis_info():
 
 @GetAction
 def requests_test():
-    return requests.get("https://cip.cc", headers={
+    return requests.get("https://cip.cc", headers=ChainMap(get_sw8_header(), {
         "User-Agent": "curl/7.77.0",
-    }).text
+    })).text
 
 
 @GetAction
