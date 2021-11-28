@@ -9,7 +9,7 @@ from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Lo
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
-from frameworks.main_server import forward
+from frameworks.main_server import forward, forward_response
 from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
@@ -339,4 +339,5 @@ def chunk3(__stream: ChunkStream, num: int, sleep=1, error=True, is_html=True):
 
 @GetAction
 def chunk4(__stream: ChunkStream):
-    forward(None, "dev.chunk3", {"num": 10})
+    # FIXME: 不支持
+    forward_response(None, "dev.chunk3", {"num": 10}, stream=__stream, wait_chunk=True)

@@ -188,19 +188,19 @@ def empty_str_getter() -> str:
 class ChunkStream:
     OVER = bytes()
 
-    def __init__(self, request: 'Request'):
+    def __init__(self, request: 'Request', forward: 'ChunkStream' = None):
         self.request = request
         self.func = None
         self.params = None
         self.__start = False
         self.__end = False
+        # noinspection PyUnresolvedReferences
         self.__buffer = Queue()
+        self.__forward_buffer = forward.__buffer if forward else None
         self.__timeout = 30
 
     def __iter__(self):
         if not self.__start:
-            self.__start = True
-
             def func():
                 try:
                     self.func(**self.params)
@@ -210,9 +210,11 @@ class ChunkStream:
                     self.__end = True
                     self.__buffer.put(ChunkStream.OVER)
 
-            gevent.spawn(func)
+            self.__start = gevent.spawn(func)
         while not self.__end:
             ret = self.__buffer.get(timeout=self.__timeout)
+            if self.__forward_buffer:
+                self.__forward_buffer.put(ret)
             if ret is ChunkStream.OVER:
                 break
             elif ret:
@@ -236,7 +238,7 @@ class Request(JsonPacket):
     服务器包装过的请求
     """
 
-    def __init__(self, session: 'SessionContext', cmd: str, params: Dict):
+    def __init__(self, session: 'SessionContext', cmd: str, params: Dict, *, stream: Optional[ChunkStream] = None):
         super().__init__()
         self.receive = int(time.time() * 1000)
         self.cmd = cmd
@@ -256,10 +258,11 @@ class Request(JsonPacket):
         # cookie
         self.rsp_cookie = {}  # type: dict
         self.rsp_header = {}  # type: dict
-        self.stream = None
+        self.stream = ChunkStream(self, stream) if stream else None
 
     def init_stream(self):
-        self.stream = ChunkStream(self)
+        if not self.stream:
+            self.stream = ChunkStream(self)
         return self.stream
 
     @classmethod

@@ -25,7 +25,7 @@ from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_pr
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
-from .base import Request, IPacket, TextResponse, Response, ChunkPacket
+from .base import Request, IPacket, TextResponse, Response, ChunkPacket, HTMLPacket, ChunkStream
 from .context import DefaultRouter, Server
 from .models import BaseNode, BaseSaveModel
 from .server_context import SessionContext
@@ -564,14 +564,24 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         return [b'500']
 
 
-def forward(session: Optional[SessionContext],
-            cmd: str, param: Dict,
-            ok_only=True, wait_chunk=False,
-            ) -> Tuple[int, Dict]:
+def forward(session: Optional[SessionContext], cmd: str, param: Dict, ok_only=True) -> Tuple[int, Dict]:
+    # noinspection PyTypeChecker
+    response: Response = forward_response(session, cmd, param)
+    if ok_only and response.ret != 0:
+        raise BusinessException(response.ret, response.error, internal_msg=f"forward[{cmd}]执行失败")
+    return response.ret, response.result
+
+
+def forward_response(
+        session: Optional[SessionContext], cmd: str, param: Dict,
+        *,
+        stream: Optional[ChunkStream] = None,
+        wait_chunk=False,
+) -> IPacket:
     # todo: 应该全异步操作避免`request`的`thread_local`污染
     if session is None:
         session = SessionMgr.guest_session()
-    request = Request(session, cmd, param)
+    request = Request(session, cmd, param, stream=stream)
     SessionMgr.action_start(session, request)
     response = DefaultRouter.do(request)
     SessionMgr.action_over(session, request, response)
@@ -585,10 +595,7 @@ def forward(session: Optional[SessionContext],
             func()
         else:
             gevent.spawn(func)
-        return 0, {}
-    if ok_only and response.ret != 0:
-        raise BusinessException(response.ret, response.error, internal_msg=f"forward[{cmd}]执行失败")
-    return response.ret, response.result
+    return response
 
 
 def packet_route(session, cmd: str, params: dict, orig_getter: Callable[[], str],
