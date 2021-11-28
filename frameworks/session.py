@@ -172,10 +172,10 @@ class RedisSessionMgr(_SessionMgr):
         _session.update()
         if _session.get_uuid():
             db_session.set(f"session_uuid:{_session.get_uuid()}", _session.to_json_str(),
-                           ex=_session.get_expire() - _session.get_last())
+                           ex=(_session.get_expire() - _session.get_last()) // 1000)
         else:
             db_session.set(f"session_token:{_session.get_token()}", _session.to_json_str(),
-                           ex=_session.get_expire() - _session.get_last())
+                           ex=(_session.get_expire() - _session.get_last()) // 1000)
         return _session
 
     def action_start(self, session: SessionContext, request: Request):
