@@ -16,6 +16,9 @@ class TestNode(SimpleNode):
     field3 = True
     field4 = []
 
+    def mapping1(self) -> Optional[str]:
+        return self.field2
+
 
 def __reset():
     pass

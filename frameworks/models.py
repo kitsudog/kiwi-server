@@ -260,8 +260,21 @@ class BaseSaveModel(BaseModel, ABC):
         key = self.get_key()
         orig_version = self.update_version()
         value = self.to_json_str()
+        raw = str_json(value)
+        mapping1 = self.mapping1()
+        if mapping1:
+            orig = self.get_orig() or {}
+            if mapping1 == orig.get("_key"):
+                # 已经有了可以认为
+                pass
+            else:
+                mapping_add(self.__name__, mapping1, key)
+                # 附加一个_key
+                raw["_key"] = mapping1
+                value = json_str(raw)
         if save_redis:
             if is_debug():
+                # 调试版本支持更严格的版本限制
                 if not ignore_version:
                     if orig := db_get_json_list([key], allow_not_found=True, fail=True):
                         orig = orig[0]
@@ -273,19 +286,10 @@ class BaseSaveModel(BaseModel, ABC):
                                     Log(f"orig data [{key}=>{orig}]")
                                     Error(f"node[{self.__class__.__name__}]出现复写问题")
             db_set(key, value)
-        raw = str_json(value)
         if self.mapping_list():
             self.append_mapping(raw)
         if mongo_right_now:
             mongo_set(self.get_key(), raw, model=self.__name__)
-        mapping1 = self.mapping1()
-        if mapping1:
-            orig = self.get_orig() or {}
-            if mapping1 == orig.get("_key"):
-                # 已经有了可以认为
-                pass
-            else:
-                mapping_add(self.__name__, mapping1, key)
         self.dirty()
         return self
 
