@@ -19,12 +19,28 @@ def markdown_html(markdown: str, css: str) -> HTMLPacket:
     <!--<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
     <script src="/js/showdown.min.js"></script>
     <script src="/js/jquery-3.3.1.min.js"></script>
+    <script src="/js/jquery.tablesort.min.js"></script>
     <script src="/js/jquery.json-viewer.js"></script>
     <link href="/css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
     <script>
         var content = document.getElementById('content');
         var markdown = content.getElementsByTagName("pre")[0].innerHTML;
         // content.innerHTML = marked(markdown);
+        $(function(){{
+            $.tablesort.defaults = {{
+                compare: function(a, b) {{		// Function used to compare values when sorting.
+                    try{{
+                        a = parseInt(a)||a;
+                        b = parseInt(b)||b;
+                    }}catch(e){{
+                    }}
+                    if (a > b) return 1;
+                    else if (a < b) return -1;
+                    else return 0;
+                }}
+            }};
+            $('table').tablesort();
+        }});
     </script>
     <script>
         if(window.location.href.indexOf("debug")<0){{

@@ -30,7 +30,7 @@ def table_show(
         header: List[str] = ["header-1", "header-2", "header-3", "header-4"],
         table: List[Dict] = [
             {"header-1": 1, "header-2": 2, "header-3": 3, "header-4": 4},
-            {"header-1": 5, "header-3": 7, "header-4": 8},
+            {"header-1": 5, "header-3": 12, "header-4": 8},
         ],
         row: List = [
             ["c11", "c12", "c13", "c14"],
