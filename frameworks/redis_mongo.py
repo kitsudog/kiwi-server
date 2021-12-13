@@ -270,7 +270,7 @@ def mongo_mget(key_list: Sequence[str], model: Optional[str] = None, active=True
     return ret
 
 
-# noinspection PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic,SpellCheckingInspection
 class DailyRedis:
     def __init__(self, db):
         self.__db: Redis = db
@@ -297,11 +297,12 @@ class DailyRedis:
         self.__db.delete(key)
         return ret
 
-    # noinspection SpellCheckingInspection
     def hget(self, name, key):
         return self.__db.hget(f"{self._prefix()}|{name}", key)
 
-    # noinspection SpellCheckingInspection
+    def hgetall(self, name):
+        return self.__db.hgetall(f"{self._prefix()}|{name}")
+
     def hset(self, name, key=None, value=None, mapping=None):
         return self.__db.hset(f"{self._prefix()}|{name}", key, value=value, mapping=mapping)
 
@@ -328,9 +329,6 @@ class DailyRedis:
 
     def hvals(self, name):
         return self.__db.hvals(f"{self._prefix()}|{name}")
-
-    def hstrlen(self, name, key):
-        return self.__db.hstrlen(f"{self._prefix()}|{name}", key)
 
     def lindex(self, name, index):
         return self.__db.lindex(f"{self._prefix()}|list|{name}", index)
@@ -521,7 +519,7 @@ class MessageChannel:
         counter = self.redis.incrby(self.counter_key, amount=1)
         data = MessageChannel.MessageData(id=counter, ts=now(), data=raw)
         Assert(
-            self.redis.hsetnx(self.key, counter, json_str(data)),
+            self.redis.hsetnx(self.key, str(counter), json_str(data)),
             "channel写入错误"
         )
         if counter % 100 == 0:
@@ -563,7 +561,7 @@ class MessageChannel:
         """
         负责获取一条最新的
         """
-        if ret := self.redis.hget(self.key, self.cursor):
+        if ret := self.redis.hget(self.key, str(self.cursor)):
             data: MessageChannel.MessageData = str_json(ret)
             self.cursor = data["id"] + 1
             return data
@@ -612,10 +610,6 @@ def model_id_list(key: str, start=0, length=100):
 
 def db_dirty(cate, key) -> bool:
     return db_mgr.sadd("dirty:%s" % cate, key) > 0
-
-
-def index_set(key: str, index: int, model_id: int):
-    db_model_ex.zadd(key, model_id, index)
 
 
 def mapping_get(model, mapping, prop="_key") -> Optional[str]:
