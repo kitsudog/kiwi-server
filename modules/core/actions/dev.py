@@ -294,6 +294,13 @@ def login0(__session: SessionContext, uuid: str):
     }
 
 
+@Action
+def login1(__auth, __session: SessionContext):
+    return {
+        "token": __session.get_token(),
+    }
+
+
 @GetAction
 def redis_info():
     Log("redis_info")

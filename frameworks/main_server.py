@@ -8,7 +8,6 @@ from time import sleep
 from typing import List, Tuple, Optional, Iterable, Callable, Dict, Type
 
 import gevent
-import requests
 import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
@@ -20,7 +19,7 @@ from skywalking.trace.tags import TagHttpMethod, TagHttpURL, TagHttpStatusCode
 
 from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
     profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock, has_sky_walking
-from base.utils import read_binary_file, read_file, md5bytes, write_file
+from base.utils import read_binary_file, read_file, md5bytes, write_file, my_ip
 from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
 from .base import Request, IPacket, TextResponse, Response, ChunkPacket, ChunkStream
@@ -381,7 +380,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         if is_dev():
             # 获取外网ip
             Log("获取外网ip")
-            params["$ip"] = ExprIP.search(requests.get("http://myip.ipip.net", timeout=3).text).group()
+            params["$ip"] = ExprIP.search(my_ip()).group()
         pass
     sw_span.peer = '%s:%s' % (_ip, environ["REMOTE_PORT"])
     if method == "GET":

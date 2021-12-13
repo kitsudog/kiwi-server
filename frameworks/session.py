@@ -221,4 +221,3 @@ class RedisSessionMgr(_SessionMgr):
 
 SessionMgr: RedisSessionMgr = RedisSessionMgr()
 Server.add_service(SessionMgr)
-# SessionMgr = CacheSessionMgr()

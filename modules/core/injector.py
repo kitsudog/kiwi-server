@@ -2,6 +2,7 @@ import os
 from typing import TypedDict
 
 import jwt
+
 from base.style import Assert
 from frameworks.actions import Action, FBCode
 from frameworks.base import Request
@@ -26,12 +27,13 @@ class JWTInjector(Action.Injector):
     # noinspection PyBroadException
     def from_req(self, req: Request) -> any:
         auth = req.params["#raw#"].get("HTTP_AUTHORIZATION")
-        FBCode.CODE_缺少参数(auth)
-        FBCode.CODE_缺少参数(auth.lower().startswith("bearer "))
+        FBCode.CODE_缺少AUTH(auth)
+        FBCode.CODE_缺少AUTH(auth.lower().startswith("bearer "))
         try:
-            return jwt.decode(
+            ret: JWTPayload = jwt.decode(
                 auth[len("bearer "):], key=CORE_JWT_SECRET, algorithms=[CORE_JWT_ALGORITHMS],
                 options={"verify_exp": True, "verify_aud": False},
             )
+            return ret
         except Exception:
             FBCode.CODE_尚未登录(False)

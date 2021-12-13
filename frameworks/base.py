@@ -130,6 +130,10 @@ class JsonPacket(IPacket):
         self.sid = 0
         self.__bytes_content = None  # type: Optional[bytes]
         self.bytes_support = None  # type: Optional[bool]
+        self.status = 200
+
+    def status_code(self) -> int:
+        return self.status
 
     @classmethod
     def from_json(cls, _json):

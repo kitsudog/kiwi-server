@@ -24,12 +24,13 @@ def local_request() -> Request:
 
 
 class BusinessException(Exception):
-    def __init__(self, error_id, msg, *, internal_msg: Optional[str] = None, params=None):
+    def __init__(self, error_id, msg, *, internal_msg: Optional[str] = None, params=None, status_code=200):
         Exception.__init__(self, msg)
         self.error_id = error_id
         self.params = params or {}
         self.msg = msg
         self.internal_msg = internal_msg or msg
+        self.status_code = status_code
 
     def __str__(self):
         return f"{self.__class__.__name__}: {self.internal_msg}"
@@ -221,7 +222,9 @@ class Action(FastAction):
             Assert(self.param.startswith("__"), "框架参数必须采用__开头")
 
         def from_req(self, req: Request):
-            return req.params[f"${self.param}"]
+            tmp = req.params.get(f"${self.param}")
+            FBCode.CODE_框架错误(tmp is not None)
+            return tmp
 
     class WrapperInjector(Injector):
 
@@ -802,7 +805,9 @@ class Action(FastAction):
                 for each in self.__injector_list:
                     params[each.param] = each.from_req(request)
                     if params[each.param] is NONE:
-                        raise BusinessException(404, f"参数[{each.alias}]没有指定")
+                        FBCode.CODE_缺少参数(False, param_func=lambda: {
+                            "param": each.alias,
+                        })
             with SentryBlock(op="Action", name=self.func_title) as span:
                 if request.stream:
                     request.stream.func = self.func
@@ -870,6 +875,7 @@ class Action(FastAction):
             response = Response(e.error_id, ret)
             response.error = e.msg
             response._debug = e.internal_msg
+            response.status = e.status_code
         except FailError as e:
             """
             断言级别的错误
@@ -976,7 +982,11 @@ class Code:
                     obj.msg = v.msg
                     obj.internal_msg = internal_msg
                 else:
-                    continue
+                    obj = v
+                    if not v.msg:
+                        v.msg = internal_msg
+                    if not v.internal_msg:
+                        v.internal_msg = internal_msg
             elif isinstance(v, tuple):
                 if isinstance(code := v[0], Code):  # 可以直接复用
                     v = [code.code] + v[1:]
@@ -1006,14 +1016,15 @@ class Code:
                 setattr(cls, k, obj)
                 Code.__pool__[obj.code] = obj
 
-    def __init__(self):
-        self.code = 500
-        self.msg = ""
+    def __init__(self, code: int = 500, error: str = "", internal_msg: str = "", *, status_code=500):
+        self.code = code
+        self.msg = error
         self.gen = False
         self.alias = False
-        self.internal_msg: str = ""
+        self.internal_msg: str = internal_msg
         self.error = None
         self.need_param = []
+        self.status_code = status_code
 
     @classmethod
     def all_code(cls):
@@ -1041,7 +1052,8 @@ class Code:
                     "src": each.group(),
                     "param": each.groups()[0],
                 })
-        self.error = BusinessException(self.code, self.msg, internal_msg=self.internal_msg or self.msg)
+        self.error = BusinessException(self.code, self.msg, internal_msg=self.internal_msg or self.msg,
+                                       status_code=self.status_code)
 
     # noinspection PyMethodMayBeStatic
     def __param_str_to_dict(self, src, params):
@@ -1093,15 +1105,17 @@ class Code:
 
 # noinspection NonAsciiCharacters
 class FBCode(Code):
-    CODE_参数不正确: Code = 1101, "参数不正确", "[${param}=${hint}:${uuid}]不存在"
-    CODE_UUID参数不正确: Code = 1102, "参数不正确", "[${param}=${hint}:${uuid}]不存在"
-    CODE_尚未登录: Code = 1103, "尚未登录"
-    CODE_参数不是数字: Code = 1104, "参数不正确", "参数不是数字[${value}]"
-    CODE_参数不是小数: Code = 1105, "参数不正确", "参数不是小数[${value}]"
-    CODE_参数不是合法布尔值: Code = 1106, "参数不正确", "参数不是合法布尔值[${value}]"
-    CODE_参数不是合法数组: Code = 1107, "参数不正确", "参数不是合法数组[${value}]"
-    CODE_参数不是合法集合: Code = 1108, "参数不正确", "参数不是合法集合[${value}]"
-    CODE_参数不是JSON: Code = 1109, "参数不正确", "参数不是合法JSON[${value}]"
-    CODE_缺少参数: Code = 1110
-    CODE_参数类型不对: Code = 1111, "参数不正确"
-    CODE_登录失效: Code = 1112, "请重新登录"
+    CODE_参数不正确 = Code(1101, "invalid request", "[${param}=${hint}:${uuid}]不存在", status_code=400)
+    CODE_UUID参数不正确 = Code(1102, "invalid request", "[${param}=${hint}:${uuid}]不存在", status_code=400)
+    CODE_尚未登录 = Code(1103, "unauthorized", status_code=401)
+    CODE_参数不是数字 = Code(1104, "invalid request", "参数不是数字[${value}]", status_code=400)
+    CODE_参数不是小数 = Code(1105, "invalid request", "参数不是小数[${value}]", status_code=400)
+    CODE_参数不是合法布尔值 = Code(1106, "invalid request", "参数不是合法布尔值[${value}]", status_code=400)
+    CODE_参数不是合法数组 = Code(1107, "invalid request", "参数不是合法数组[${value}]", status_code=400)
+    CODE_参数不是合法集合 = Code(1108, "invalid request", "参数不是合法集合[${value}]", status_code=400)
+    CODE_参数不是JSON = Code(1109, "invalid request", "参数不是合法JSON[${value}]", status_code=400)
+    CODE_缺少AUTH = Code(1110, "unauthorized", status_code=401)
+    CODE_参数类型不对 = Code(1111, "invalid request", status_code=400)
+    CODE_登录失效 = Code(1112, "unauthorized", status_code=401)
+    CODE_缺少参数 = Code(1113, "invalid request", "缺少参数[${param}]", status_code=400)
+    CODE_框架错误 = Code(1114, "server error", status_code=500)
