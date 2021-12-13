@@ -12,8 +12,6 @@ import requests
 import sentry_sdk
 import simplejson
 # noinspection PyProtectedMember
-from PIL import Image
-# noinspection PyProtectedMember
 from gevent.pywsgi import Input
 from jinja2 import Template
 from skywalking import Layer, Component
@@ -25,7 +23,7 @@ from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_pr
 from base.utils import read_binary_file, read_file, md5bytes, write_file
 from base.valid import ExprIP
 from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
-from .base import Request, IPacket, TextResponse, Response, ChunkPacket, HTMLPacket, ChunkStream
+from .base import Request, IPacket, TextResponse, Response, ChunkPacket, ChunkStream
 from .context import DefaultRouter, Server
 from .models import BaseNode, BaseSaveModel
 from .server_context import SessionContext
@@ -722,21 +720,21 @@ def tick_cycle():
             Log("tick耗时[%s]" % cost_map, _logger=profiler_logger)
 
 
-def new_upload_image(content: bytes) -> str:
-    """
-    只针对可以转为jpg的
-    """
-    filename = f"{md5bytes(content)}-{len(content)}"
-    path = os.path.join(Server.upload_dir, date_str4(), f"{filename}.jpg")
-    if os.path.exists(path):
-        Log(f"上传重复的图片[{path}]")
-    else:
-        img: Image.Image = Image.open(BytesIO(content))
-        buffer = BytesIO()
-        img.convert("RGB").save(buffer, format="jpeg")
-
-        write_file(path, buffer.getvalue())
-    return path.replace(Server.upload_dir, Server.upload_prefix)
+# def new_upload_image(content: bytes) -> str:
+#     """
+#     只针对可以转为jpg的
+#     """
+#     filename = f"{md5bytes(content)}-{len(content)}"
+#     path = os.path.join(Server.upload_dir, date_str4(), f"{filename}.jpg")
+#     if os.path.exists(path):
+#         Log(f"上传重复的图片[{path}]")
+#     else:
+#         img: Image.Image = Image.open(BytesIO(content))
+#         buffer = BytesIO()
+#         img.convert("RGB").save(buffer, format="jpeg")
+#
+#         write_file(path, buffer.getvalue())
+#     return path.replace(Server.upload_dir, Server.upload_prefix)
 
 
 def new_upload_file(content: bytes, ext="dat") -> str:
