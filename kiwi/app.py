@@ -410,12 +410,14 @@ def _main(mode: Iterable[str]):
             state: Optional[str]
             propertySources: List[ConfigItem]
 
-        spring_cloud_config: SpringCloudConfig = requests.get(spring_cloud_config_server_url, headers=dict(
-            map(
+        profile = os.environ.get("SPRING_PROFILES_ACTIVE", "test")
+        spring_cloud_config: SpringCloudConfig = requests.get(
+            f"{spring_cloud_config_server_url}/{profile}",
+            headers=dict(map(
                 lambda x: x.partition("="),
-                filter(lambda x: x, os.environ.get("SPRING_CLOUD_CONFIG_SERVER_HEADER", "").split(";")),
-            )
-        )).json()
+                filter(lambda x: x, os.environ.get(
+                    "SPRING_CLOUD_CONFIG_SERVER_HEADER", "").split(";")),
+            ))).json()
         for k, v in spring_cloud_config["propertySources"][0]["source"].items():
             os.environ[k.upper().replace(".", "_")] = v
     with Block("启动服务器"):
