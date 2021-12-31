@@ -395,6 +395,29 @@ def main(**kwargs):
 def _main(mode: Iterable[str]):
     active_console()
     Log("初始化服务器")
+    if spring_cloud_config_server_url := os.environ.get("SPRING_CLOUD_CONFIG_SERVER_URL"):
+        Log(f"激活配置[{spring_cloud_config_server_url}]")
+
+        class ConfigItem(TypedDict):
+            name: str
+            source: Dict[str, str]
+
+        class SpringCloudConfig(TypedDict):
+            name: str
+            profile: List[str]
+            label: Optional[str]
+            version: str
+            state: Optional[str]
+            propertySources: List[ConfigItem]
+
+        spring_cloud_config: SpringCloudConfig = requests.get(spring_cloud_config_server_url, headers=dict(
+            map(
+                lambda x: x.partition("="),
+                filter(lambda x: x, os.environ.get("SPRING_CLOUD_CONFIG_SERVER_HEADER", "").split(";")),
+            )
+        )).json()
+        for k, v in spring_cloud_config["propertySources"][0]["source"].items():
+            os.environ[k.upper().replace(".", "_")] = v
     with Block("启动服务器"):
         if not os.path.exists("conf/module.conf"):
             os.makedirs("conf", exist_ok=True)
