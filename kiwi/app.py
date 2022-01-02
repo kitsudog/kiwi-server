@@ -396,6 +396,9 @@ def _main(mode: Iterable[str]):
     active_console()
     Log("初始化服务器")
     if spring_cloud_config_server_url := os.environ.get("SPRING_CLOUD_CONFIG_SERVER_URL"):
+        # builder = ClientConfigurationBuilder()
+        # c = SpringConfigClient(builder.build())
+        # c.get_config()
         Log(f"激活配置[{spring_cloud_config_server_url}]")
 
         class ConfigItem(TypedDict):
@@ -411,15 +414,19 @@ def _main(mode: Iterable[str]):
             propertySources: List[ConfigItem]
 
         profile = os.environ.get("SPRING_PROFILES_ACTIVE", "test")
-        spring_cloud_config: SpringCloudConfig = requests.get(
+        rsp = requests.get(
             f"{spring_cloud_config_server_url}/{profile}",
             headers=dict(map(
                 lambda x: x.partition("="),
                 filter(lambda x: x, os.environ.get(
                     "SPRING_CLOUD_CONFIG_SERVER_HEADER", "").split(";")),
-            ))).json()
-        for k, v in spring_cloud_config["propertySources"][0]["source"].items():
-            os.environ[k.upper().replace(".", "_")] = v
+            )))
+        if rsp.status_code == 200:
+            spring_cloud_config: SpringCloudConfig = rsp.json()
+            if sources := spring_cloud_config["propertySources"]:
+                for each in sources:
+                    for k, v in each["source"].items():
+                        os.environ[k.upper().replace(".", "_")] = v
     with Block("启动服务器"):
         if not os.path.exists("conf/module.conf"):
             os.makedirs("conf", exist_ok=True)
