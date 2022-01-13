@@ -31,6 +31,11 @@ from .sql_model import UUIDModel, UUIDNode
 
 ignore_cmd = {"server.ping"}
 ignore_cmd_last = {}
+# https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
+OPTIONS_HEADERS = ["Content-Type", "Authorization", "*"]
+if os.environ.get("OPTIONS_HEADERS"):
+    OPTIONS_HEADERS.extend(os.environ.get("OPTIONS_HEADERS").split(","))
+OPTIONS_HEADERS_STR = ", ".join(OPTIONS_HEADERS)
 
 
 def reg_get_handler_ex(*, path: str, action: GetAction):
@@ -393,7 +398,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         ret = list()
         ret.append(("Access-Control-Allow-Origin", "*"))
         ret.append(("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
-        ret.append(("Access-Control-Allow-Headers", "*"))
+        ret.append(("Access-Control-Allow-Headers", OPTIONS_HEADERS_STR))
         start_response('200 OK', ret)
         sw_span.tag(TagHttpStatusCode(200))
         return [b""]
