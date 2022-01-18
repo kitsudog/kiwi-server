@@ -23,6 +23,13 @@ def local_request() -> Request:
     return thread_local_action.request
 
 
+class FrameworkException(Exception):
+    def __init__(self, title, packet):
+        Exception.__init__(self, title)
+        self.msg = title
+        self.packet = packet
+
+
 class BusinessException(Exception):
     def __init__(self, error_id, msg, *, internal_msg: Optional[str] = None, params=None, status_code=200):
         Exception.__init__(self, msg)
@@ -84,6 +91,7 @@ class ActionBytes(bytes):
             return bytes.__str__(self)
 
 
+# noinspection PyMethodMayBeStatic
 class Action(FastAction):
     class Injector:
 
@@ -887,6 +895,13 @@ class Action(FastAction):
             err_code = e.error_id
             if not self.__class__ == Action:
                 raise e
+        except FrameworkException as e:
+            has_err = True
+            err_msg = FBCode.CODE_框架错误.msg
+            err_code = FBCode.CODE_框架错误.code
+            Trace("[%s][%s] %s" % (request.cmd, request.session, e.msg), e)
+            if e.packet:
+                response = e.packet
         except OSError as e:
             has_err = True
             err_code = -100
@@ -910,10 +925,14 @@ class Action(FastAction):
                     Log(f"action[{self.func_title}]commit[{db_session.dirty}]")
                 db_session.remove()
         if has_err:
-            response = ErrorResponse(err_msg, ret=err_code)
+            if response:
+                pass
+            else:
+                response = ErrorResponse(err_msg, ret=err_code)
             framework(err_code, err_msg)
         return response
 
+    # noinspection PyUnusedLocal
     def wrapper_log(self, request: Request, response: Response, log: any):
         if hasattr(log, "save"):
             log.save()
@@ -1119,3 +1138,4 @@ class FBCode(Code):
     CODE_登录失效 = Code(1112, "unauthorized", status_code=401)
     CODE_缺少参数 = Code(1113, "invalid request", "缺少参数[${param}]", status_code=400)
     CODE_框架错误 = Code(1114, "server error", status_code=500)
+    CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401)

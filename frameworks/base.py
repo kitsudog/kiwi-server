@@ -37,6 +37,9 @@ class IPacket(object):
     def status_code(self) -> int:
         return 200
 
+    def base_auth(self) -> str:
+        return ""
+
     def chunk_stream(self) -> Optional[Generator]:
         return None
 
@@ -89,6 +92,14 @@ class HTMLPacket(HTTPPacket):
 
     def to_write_data(self) -> bytes:
         return self.content.encode("utf8")
+
+
+class NeedBasicAuthPacket(HTMLPacket):
+    def __init__(self, content: str = "Need Auth"):
+        super().__init__(content, status=401)
+
+    def base_auth(self) -> str:
+        return "kiwi"
 
 
 class JsonHTMLPacket(HTMLPacket):

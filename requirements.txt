@@ -21,6 +21,7 @@ spring-config-client
 # pypy不支持下面的
 apache-skywalking
 uwsgi
+python-ldap
 
 
 

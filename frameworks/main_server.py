@@ -481,6 +481,10 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     if rsp.status_code() == 200:
                         start_response('200 OK', ret)
                         sw_span.tag(TagHttpStatusCode(200))
+                    elif rsp.status_code() == 401 and rsp.base_auth():
+                        ret.append(("WWW-Authenticate", f'Basic realm="{rsp.base_auth()}"'))
+                        start_response('401 ', ret)
+                        sw_span.tag(TagHttpStatusCode(rsp.status_code()))
                     else:
                         start_response('%s' % rsp.status_code(), ret)
                         sw_span.tag(TagHttpStatusCode(rsp.status_code()))

@@ -9,7 +9,7 @@ from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Lo
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import ChunkPacket, ChunkStream
 from frameworks.context import DefaultRouter
-from frameworks.main_server import forward, forward_response
+from frameworks.main_server import forward_response
 from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
@@ -284,6 +284,16 @@ def api_list(module="*"):
     width: 300px;
 }
 """)
+
+
+@GetAction
+def auth(__basic_auth):
+    return ""
+
+
+@GetAction
+def ldap_auth(__ldap_auth):
+    return __ldap_auth
 
 
 @Action
