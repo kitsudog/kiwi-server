@@ -77,16 +77,19 @@ class LDAPAuthInjector(BasicAuthInjector):
                 raise FrameworkException("找不到用户", NeedBasicAuthPacket())
             if len(result_data) > 1:
                 raise FrameworkException("多个用户", NeedBasicAuthPacket())
-            Log(f"[LDAP] 找到用户[user={result_data[0]}")
+            result_data = result_data[0]
+            Log(f"[LDAP] 找到用户[user={result_data}")
             db_session.setex(f"ldap:cache:search:{username}", 3600, json_str(result_data))
-        if db_session.get(f"ldap:cache:simple_bind_s:{result_data}:{password}"):
+        domain_name, detail = result_data
+        if db_session.get(f"ldap:cache:simple_bind_s:{domain_name}:{password}"):
             pass
         else:
             try:
-                LDAPAuthInjector.ldap_conn.simple_bind_s(result_data[0][0], password)
-                db_session.setex(f"ldap:cache:simple_bind_s:{result_data}:{password}", 3600, "true")
+                LDAPAuthInjector.ldap_conn.simple_bind_s(domain_name, password)
+                db_session.setex(f"ldap:cache:simple_bind_s:{domain_name}:{password}", 3600, "true")
             except ldap.INVALID_CREDENTIALS:
                 raise FrameworkException("缺少auth", NeedBasicAuthPacket())
+        return result_data
 
 
 class JWTInjector(Action.Injector):
