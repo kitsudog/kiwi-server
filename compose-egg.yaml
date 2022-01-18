@@ -1,9 +1,0 @@
-version: '3'
-services:
-  main:
-    build:
-      context: .
-      dockerfile: Dockerfile-egg
-    entrypoint: python3 setup.py bdist_egg
-    volumes:
-      - ./dist:/app/dist

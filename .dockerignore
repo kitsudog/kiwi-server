@@ -9,3 +9,10 @@
 /dist
 /build
 **/__pycache__
+/.ci
+/.git
+/.idea
+/.gitignore
+/.dockerignore
+/__pycache__
+/*.sh

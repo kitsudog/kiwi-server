@@ -1,6 +1,5 @@
 #!/usr/bin/env sh
-export VERSION=v${BUILD_NUMBER:-0.1}
-export IMAGE=${IMAGE:-${JOB_BASE_NAME:-local}:${VERSION}}
+export IMAGE=kitsudo/kiwi-server:python-3.8
 
 echo "image: ${IMAGE}"
 set -x
@@ -9,4 +8,3 @@ if [ "${NO_GFW}" = "TRUE" ]; then
 else
   docker build . -f .ci/Dockerfile -t "${IMAGE}" --build-arg "BUILD_NUMBER=${BUILD_NUMBER}" --build-arg "GIT_TAG=${GIT_TAG:-dev}"
 fi
-
