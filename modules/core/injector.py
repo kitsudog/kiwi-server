@@ -53,7 +53,7 @@ class LDAPAuthInjector(BasicAuthInjector):
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_PASSWORD"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_BASE_DN"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_FILTER", "uid"))
-            LDAPAuthInjector.ldap_conn = ldap.initialize(os.environ.get("LDAP_URL"))
+            LDAPAuthInjector.ldap_conn = ldap.ldapobject.ReconnectLDAPObject(os.environ.get("LDAP_URL"))
             LDAPAuthInjector.ldap_conn.simple_bind_s(os.environ.get("LDAP_BIND_DN"), os.environ.get("LDAP_PASSWORD"))
 
         username, password = super().from_req(req)
