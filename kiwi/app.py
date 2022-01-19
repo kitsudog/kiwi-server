@@ -449,6 +449,9 @@ def _main(mode: Iterable[str]):
         with Block("检查所有模块models"):
             for entry in all_entry:
                 load_module("modules.%s.models" % entry)
+        with Block("检查所有模块injector"):
+            for entry in all_entry:
+                load_module("modules.%s.injector" % entry)
         init_sky_walking(f"{os.environ.get('VIRTUAL_HOST', ''.join(all_entry))}@{TAG}")
         if is_debug():
             # 调试阶段随机初始化顺序依次破除顺序依赖
@@ -456,7 +459,6 @@ def _main(mode: Iterable[str]):
         with Block("加载模块"):
             for entry in set(all_entry):
                 with Block(f"加载模块[{entry}]", log=True):
-                    injector_list = []
                     with Block("初始化静态资源"):
                         # noinspection PyProtectedMember
                         module_path = load_module("modules.%s" % entry).__path__._path[0]
@@ -469,21 +471,10 @@ def _main(mode: Iterable[str]):
                                         os.path.join(root[len(static_path):], file),
                                     )
 
-                    with Block("初始化injector"):
-                        # noinspection PyBroadException
-                        try:
-                            for each in load_module("modules.%s.injector" % entry).__dict__.values():
-                                if isinstance(each, Action.Injector):
-                                    injector_list.append(each)
-                        except ModuleNotFoundError:
-                            pass
                     module = all_module[entry] = load_module("modules.%s.main" % entry)
                     Assert("init_server" in module.__dict__, f"模块[{entry}]主需要包含[init_server]方法作为加载后的初始化")
                     Assert("prepare" in module.__dict__, f"模块[{entry}]主需要包含[prepare]方法作为模块启动初始化")
                     module.__dict__["init_server"]()
-                    with Block("卸载模块自定义的injector"):
-                        for each in injector_list:
-                            Action.Injector.remove_default_inspector(each)
 
         with Block("初始化模块", log_both=True, log_cost=True):
             has_prepared_module = set()

@@ -70,6 +70,7 @@ class FastAction(DecorateHelper):
         """
         router注册后执行
         """
+        self.prepare()
         if verbose:
             Log(f"reg handler[{cmd}]")
 
@@ -665,6 +666,12 @@ class Action(FastAction):
         "__session": lambda request: request.session,
     }
 
+    def post_register(self, cmd: str, *, verbose=False):
+        super().post_register(cmd, verbose=verbose)
+        if verbose:
+            for each in self.__injector_list:
+                Log(f"reg handler[{cmd}] + {each.alias}@{type(each).__name__}")
+
     @classmethod
     def reg_param_injector(cls, param, injector: Callable[[Request], None]):
         """
@@ -940,6 +947,7 @@ class Action(FastAction):
 
 class GetAction(Action):
     def post_register(self, cmd: str, *, verbose=False):
+        super().post_register(cmd, verbose=verbose)
         if verbose:
             Log(f"get handler[{cmd}]")
 
