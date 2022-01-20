@@ -259,6 +259,16 @@ def index():
     return f'Hello World[{TAG}]!'
 
 
+@app.route('/<module>/')
+def index2(module):
+    return f'Hello World[{module}][{TAG}]!'
+
+
+@app.route('/<module>/api_list')
+def api_list(module):
+    return requests.get(f"http://127.0.0.1:{8000}/admin/api_list?module={module}").content
+
+
 @app.route('/<int:product_id>/callback')
 def open_callback(product_id):
     return requests.post(

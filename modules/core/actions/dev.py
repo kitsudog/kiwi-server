@@ -272,7 +272,7 @@ def api_list(module="*"):
         with Block("markdown Action链接"):
             markdown += "\n"
             for each in tmp:
-                markdown += f"[{each['api']}]: /admin/api_log?api={each['api']}" + "\n"
+                markdown += f"[{each['api']}]: api_log?api={each['api']}" + "\n"
     return markdown_html(markdown, """
 #模块 {
     width: 50px;

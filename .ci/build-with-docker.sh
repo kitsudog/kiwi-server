@@ -4,7 +4,7 @@ export IMAGE=kitsudo/kiwi-server:python-3.8
 echo "image: ${IMAGE}"
 set -x
 if [ "${NO_GFW}" = "TRUE" ]; then
-  docker build --platform linux/amd64 . -f .ci/Dockerfile -t "${IMAGE}" --build-arg "BUILD_NUMBER=${BUILD_NUMBER}" --build-arg "GIT_TAG=${GIT_TAG:-dev}" --build-arg PYPI_OPTIONS=""
+  docker build --platform linux/amd64 . -f .ci/Dockerfile -t "${IMAGE}" --build-arg PYPI_OPTIONS=""
 else
-  docker build --platform linux/amd64 . -f .ci/Dockerfile -t "${IMAGE}" --build-arg "BUILD_NUMBER=${BUILD_NUMBER}" --build-arg "GIT_TAG=${GIT_TAG:-dev}"
+  docker build --platform linux/amd64 . -f .ci/Dockerfile -t "${IMAGE}"
 fi

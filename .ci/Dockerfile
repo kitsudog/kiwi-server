@@ -5,7 +5,7 @@ WORKDIR /app/server
 COPY requirements.txt /app/kiwi/requirements.txt
 RUN sh -c "cd /app/kiwi;pip install -r requirements.txt ${PYPI_OPTIONS}"
 COPY . /app/kiwi
-RUN cd /app/kiwi && python setup.py install && rm -fr /app/kiwi
+RUN cd /app/kiwi && echo "__version__ = '0.0.0'" > _version.py && python setup.py install && rm -fr /app/kiwi
 RUN pip uninstall -y kiwi-server
 EXPOSE 8000
 ENV PYTHONUNBUFFERED=1 \
