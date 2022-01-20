@@ -51,8 +51,6 @@ class LDAPAuthInjector(BasicAuthInjector):
 
     def verify(self, username, password):
         if LDAPAuthInjector.ldap_connect_expire < now():
-            if LDAPAuthInjector.ldap_conn:
-                LDAPAuthInjector.ldap_conn.__exit__()
             LDAPAuthInjector.ldap_conn = None
 
         if not LDAPAuthInjector.ldap_conn:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 import json
+import os
 from abc import abstractmethod
 from copy import deepcopy
 from queue import Queue
@@ -13,6 +14,7 @@ from jwt import PyJWTError
 from base.interface import IService
 from base.style import Log, Fail, now, Block, is_debug, json_str, has_sentry, SentryBlock
 from base.utils import random_str
+from frameworks.actions import FBCode
 from frameworks.base import Request, Response, JsonPacket
 from frameworks.context import Server
 from frameworks.redis_mongo import db_session, db_other
@@ -22,7 +24,7 @@ SESSION_KEY = "eyJ0eXAiOiJKV1QiLCJhbGciOi"
 SESSION_ALGORITHMS = "HS256"
 
 
-# noinspection PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
 class _SessionMgr(IService):
     GUEST_TOKEN = "#guest#"
 
@@ -33,7 +35,7 @@ class _SessionMgr(IService):
         """
         一个完全不关心登录的会话
         """
-        return self.by_token(SessionMgr.GUEST_TOKEN, fail=False)
+        return self.by_token(_SessionMgr.GUEST_TOKEN, fail=False)
 
     @abstractmethod
     def login(self, session: SessionContext, uuid: str) -> SessionContext:
@@ -55,13 +57,39 @@ class _SessionMgr(IService):
     def by_token(self, token, fail=True) -> SessionContext:
         pass
 
-    @abstractmethod
     def action_start(self, session: SessionContext, request: Request):
-        pass
+        session.set_ip(request.params.get("$ip", "0.0.0.0"))
+        session.mark()
 
-    @abstractmethod
     def action_over(self, session: SessionContext, request: Request, response: Response):
-        pass
+        if is_debug():
+            if not isinstance(response, JsonPacket):
+                return
+            with Block("action记录", fail=False):
+                with SentryBlock(op="action记录"):
+                    content = json_str({
+                        "req": Request.json_dump(request.params),
+                        "rsp": response.to_json(),
+                    })
+                    db_other.lpush(request.cmd, content)
+                    if response.ret == 0:
+                        db_other.lpush(f"succ-{request.cmd}", content)
+                    else:
+                        db_other.lpush(f"fail-{request.cmd}", content)
+                if randint(0, 100) == 1:
+                    with SentryBlock(op="action记录log清理"):
+                        # 激活清理
+                        def trunc(key, length):
+                            cnt = max(0, db_other.llen(key) - length)
+                            if cnt:
+                                with db_other.pipeline() as db:
+                                    for _ in range(cnt):
+                                        db.rpop(key)
+                                    db.execute()
+
+                        trunc(request.cmd, 1000)
+                        trunc(f"succ-{request.cmd}", 1000)
+                        trunc(f"fail-{request.cmd}", 1000)
 
     def cycle(self, _now):
         pass
@@ -178,40 +206,6 @@ class RedisSessionMgr(_SessionMgr):
                            ex=(_session.get_expire() - _session.get_last()) // 1000)
         return _session
 
-    def action_start(self, session: SessionContext, request: Request):
-        session.set_ip(request.params.get("$ip", "0.0.0.0"))
-        session.mark()
-
-    def action_over(self, session: SessionContext, request: Request, response: Response):
-        if is_debug():
-            if not isinstance(response, JsonPacket):
-                return
-            with Block("action记录", fail=False):
-                with SentryBlock(op="action记录"):
-                    content = json_str({
-                        "req": Request.json_dump(request.params),
-                        "rsp": response.to_json(),
-                    })
-                    db_other.lpush(request.cmd, content)
-                    if response.ret == 0:
-                        db_other.lpush(f"succ-{request.cmd}", content)
-                    else:
-                        db_other.lpush(f"fail-{request.cmd}", content)
-                if randint(0, 100) == 1:
-                    with SentryBlock(op="action记录log清理"):
-                        # 激活清理
-                        def trunc(key, length):
-                            cnt = max(0, db_other.llen(key) - length)
-                            if cnt:
-                                with db_other.pipeline() as db:
-                                    for _ in range(cnt):
-                                        db.rpop(key)
-                                    db.execute()
-
-                        trunc(request.cmd, 1000)
-                        trunc(f"succ-{request.cmd}", 1000)
-                        trunc(f"fail-{request.cmd}", 1000)
-
     def cycle(self, _now):
         if self.__pool.qsize() < 10:
             Log(f"补充session队列[{self.__pool.qsize()}]")
@@ -219,5 +213,34 @@ class RedisSessionMgr(_SessionMgr):
                 self.__pool.put(Server.session_cls())
 
 
-SessionMgr: RedisSessionMgr = RedisSessionMgr()
+class NoSessionMgr(_SessionMgr):
+    def new_token(self) -> str:
+        return _SessionMgr.GUEST_TOKEN
+
+    def login(self, session: SessionContext, uuid: str) -> SessionContext:
+        raise FBCode.CODE_不支持会话(False)
+
+    def logout(self, session: SessionContext):
+        raise FBCode.CODE_不支持会话(False)
+
+    def destroy(self, session: SessionContext, title=""):
+        pass
+
+    def by_uuid(self, uuid, fail=True) -> SessionContext:
+        raise FBCode.CODE_不支持会话(False)
+
+    def by_token(self, token, fail=True) -> SessionContext:
+        if token == _SessionMgr.GUEST_TOKEN:
+            return Server.session_cls()
+        else:
+            raise FBCode.CODE_不支持会话(False)
+
+    def guest_session(self) -> SessionContext:
+        return Server.session_cls()
+
+
+if os.environ.get("REDIS_SESSION", "FALSE") == "TRUE":
+    SessionMgr = RedisSessionMgr()
+else:
+    SessionMgr = NoSessionMgr()
 Server.add_service(SessionMgr)

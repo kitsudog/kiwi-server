@@ -232,7 +232,9 @@ class Action(FastAction):
 
         def from_req(self, req: Request):
             tmp = req.params.get(f"${self.param}")
-            FBCode.CODE_框架错误(tmp is not None)
+            FBCode.CODE_框架错误(tmp is not None, param_func=lambda: {
+                "reason": f"找不到框架参数[{self.param}]",
+            })
             return tmp
 
     class WrapperInjector(Injector):
@@ -1147,3 +1149,4 @@ class FBCode(Code):
     CODE_缺少参数 = Code(1113, "invalid request", "缺少参数[${param}]", status_code=400)
     CODE_框架错误 = Code(1114, "server error", status_code=500)
     CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401)
+    CODE_不支持会话 = Code(1116, "server error", status_code=500)
