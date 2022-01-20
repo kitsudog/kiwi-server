@@ -451,7 +451,7 @@ def _main(mode: Iterable[str]):
                 load_module("modules.%s.models" % entry)
         with Block("检查所有模块injector"):
             for entry in all_entry:
-                load_module("modules.%s.injector" % entry)
+                load_module("modules.%s.injector" % entry, fail=False)
         init_sky_walking(f"{os.environ.get('VIRTUAL_HOST', ''.join(all_entry))}@{TAG}")
         if is_debug():
             # 调试阶段随机初始化顺序依次破除顺序依赖
