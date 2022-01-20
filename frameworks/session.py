@@ -231,9 +231,10 @@ class NoSessionMgr(_SessionMgr):
 
     def by_token(self, token, fail=True) -> SessionContext:
         if token == _SessionMgr.GUEST_TOKEN:
-            return Server.session_cls()
+            pass
         else:
-            raise FBCode.CODE_不支持会话(False)
+            Log("无效的Session-Cookie")
+        return Server.session_cls()
 
     def guest_session(self) -> SessionContext:
         return Server.session_cls()

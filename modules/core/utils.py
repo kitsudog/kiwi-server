@@ -17,11 +17,11 @@ def markdown_html(markdown: str, css: str) -> HTMLPacket:
     </pre>
     </div>
     <!--<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
-    <script src="/js/showdown.min.js"></script>
-    <script src="/js/jquery-3.3.1.min.js"></script>
-    <script src="/js/jquery.tablesort.min.js"></script>
-    <script src="/js/jquery.json-viewer.js"></script>
-    <link href="/css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
+    <script src="js/showdown.min.js"></script>
+    <script src="js/jquery-3.3.1.min.js"></script>
+    <script src="js/jquery.tablesort.min.js"></script>
+    <script src="js/jquery.json-viewer.js"></script>
+    <link href="css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
     <script>
         var content = document.getElementById('content');
         var markdown = content.getElementsByTagName("pre")[0].innerHTML;

@@ -20,7 +20,7 @@ import flask_migrate
 import gevent
 import requests
 # import pretty_errors
-from flask import Flask, request, Response, send_from_directory
+from flask import Flask, request, Response
 from flask_cors import CORS
 from flask_migrate import Migrate
 
@@ -269,19 +269,10 @@ def api_list(module):
     return requests.get(f"http://127.0.0.1:{8000}/admin/api_list?module={module}").content
 
 
-@app.route('/<int:product_id>/callback')
-def open_callback(product_id):
-    return requests.post(
-        f"{request.host_url}quick/game_callback?product_id={product_id}&{request.query_string}",
-        data=request.args
-    ).text
-
-
-@app.route('/download', methods=['GET'])
-def download():
-    filename = request.args["filename"]
-    # 修正名字
-    return send_from_directory("static", "." + request.args["path"], attachment_filename=filename, as_attachment=True)
+# noinspection PyUnusedLocal
+@app.route('/<module>/<path>/<file>')
+def module_static(module, path, file):
+    return requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content
 
 
 @app.route('/stream', methods=['GET'])
