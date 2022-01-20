@@ -22,6 +22,7 @@ spring-config-client
 apache-skywalking
 uwsgi
 python-ldap
+ldappool
 
 
 

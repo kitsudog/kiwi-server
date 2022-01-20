@@ -3,8 +3,9 @@ from typing import TypedDict
 
 import jwt
 import ldap
+from ldappool import ConnectionManager
 
-from base.style import Assert, json_str, str_json, Log
+from base.style import Assert, json_str, str_json, Log, now
 from base.utils import base64decode2str
 from frameworks.actions import Action, FBCode, FrameworkException
 from frameworks.base import Request, NeedBasicAuthPacket
@@ -39,24 +40,36 @@ class BasicAuthInjector(Action.Injector):
             FBCode.CODE_尚未登录(False)
 
 
+# noinspection PyMethodMayBeStatic
 class LDAPAuthInjector(BasicAuthInjector):
+    ldap_conn_mgr = None
     ldap_conn = None
+    ldap_connect_expire = 0
 
     def verify_param(self):
         Assert(self.param == "__ldap_auth", f"命名必须是__ldap_auth")
 
-    # noinspection PyBroadException
-    def from_req(self, req: Request) -> any:
+    def verify(self, username, password):
+        if LDAPAuthInjector.ldap_connect_expire < now():
+            if LDAPAuthInjector.ldap_conn:
+                LDAPAuthInjector.ldap_conn.__exit__()
+            LDAPAuthInjector.ldap_conn = None
+
         if not LDAPAuthInjector.ldap_conn:
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_URL"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_BIND_DN"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_PASSWORD"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_BASE_DN"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_FILTER", "uid"))
-            LDAPAuthInjector.ldap_conn = ldap.ldapobject.ReconnectLDAPObject(os.environ.get("LDAP_URL"))
-            LDAPAuthInjector.ldap_conn.simple_bind_s(os.environ.get("LDAP_BIND_DN"), os.environ.get("LDAP_PASSWORD"))
+            if not LDAPAuthInjector.ldap_conn_mgr:
+                LDAPAuthInjector.ldap_conn_mgr = ConnectionManager(os.environ.get("LDAP_URL"), timeout=10)
+            LDAPAuthInjector.ldap_conn = LDAPAuthInjector.ldap_conn_mgr.connection(
+                os.environ.get("LDAP_BIND_DN"),
+                os.environ.get("LDAP_PASSWORD"),
+            ).__enter__()
+            # 10min 重新链接
+            LDAPAuthInjector.ldap_connect_expire = now() + 10 * 60 * 1000
 
-        username, password = super().from_req(req)
         if not username:
             raise FrameworkException("没有用户名", NeedBasicAuthPacket())
         if "*" in username:
@@ -90,6 +103,15 @@ class LDAPAuthInjector(BasicAuthInjector):
             except ldap.INVALID_CREDENTIALS:
                 raise FrameworkException("缺少auth", NeedBasicAuthPacket())
         return result_data
+
+    # noinspection PyBroadException
+    def from_req(self, req: Request) -> any:
+        username, password = super().from_req(req)
+        try:
+            return self.verify(username, password)
+        except ldap.SERVER_DOWN as e:
+            LDAPAuthInjector.ldap_conn = None
+            raise e
 
 
 class JWTInjector(Action.Injector):
