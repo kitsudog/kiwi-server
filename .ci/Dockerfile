@@ -28,5 +28,5 @@ ONBUILD ARG SPRING_CLOUD_CONFIG_SERVER_URL
 ONBUILD ENV LOG_NAME=$LOG_NAME \
     DB_NAME=$DB_NAME \
     GIT_TAG=$GIT_TAG
-ENTRYPOINT sh -c "test '$IMAGE_DEBUG' = TRUE && (echo image debug...;tail -f /dev/stdout) || (python -m kiwi --tag=$GIT_TAG )"
+CMD sh -c "test '$IMAGE_DEBUG' = TRUE && (echo image debug...;tail -f /dev/stdout) || (python -m kiwi --tag=$GIT_TAG )"
 
