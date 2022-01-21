@@ -327,7 +327,11 @@ class FlaskWSGIAction:
             for item in carrier:
                 if value := environ.get(f"HTTP_{item.key.capitalize().upper().replace('-', '_')}"):
                     item.val = value
-            with get_context().new_entry_span(op=environ["PATH_INFO"], carrier=carrier) as sw_span:
+            op = environ["PATH_INFO"]
+            if carrier.trace_id:
+                # 加个前缀
+                op = f"+{op}"
+            with get_context().new_entry_span(op=op, carrier=carrier) as sw_span:
                 ret = wsgi_handler(environ, start_response, skip_status={404}, sw_span=sw_span)
         else:
             ret = wsgi_handler(environ, start_response, skip_status={404}, sw_span=NoopSpan())
