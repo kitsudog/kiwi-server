@@ -325,7 +325,7 @@ class FlaskWSGIAction:
             from skywalking.trace.carrier import Carrier
             carrier = Carrier()
             for item in carrier:
-                if value := environ.get(f"HTTP_{item.key.capitalize().upper()}"):
+                if value := environ.get(f"HTTP_{item.key.capitalize().upper().replace('-', '_')}"):
                     item.val = value
             with get_context().new_entry_span(op=environ["PATH_INFO"], carrier=carrier) as sw_span:
                 ret = wsgi_handler(environ, start_response, skip_status={404}, sw_span=sw_span)
