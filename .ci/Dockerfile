@@ -1,9 +1,9 @@
 FROM python:3.8
-ARG PYPI_OPTIONS=""
 RUN apt update && apt -y install libldap2-dev libsasl2-dev && apt clean
 WORKDIR /app/server
 COPY requirements.txt /app/kiwi/requirements.txt
-RUN sh -c "cd /app/kiwi;pip install -r requirements.txt ${PYPI_OPTIONS}"
+ARG PYPI_OPTIONS
+RUN sh -c "cd /app/kiwi;pip install --no-cache-dir --disable-pip-version-check -r requirements.txt ${PYPI_OPTIONS}"
 COPY . /app/kiwi
 RUN cd /app/kiwi && echo "__version__ = '0.0.0'" > _version.py && python setup.py install && rm -fr /app/kiwi
 RUN pip uninstall -y kiwi-server
@@ -19,10 +19,10 @@ ENV PYTHONUNBUFFERED=1 \
     DEBUG=FALSE \
     VIRTUAL_PORT=8000 \
     TZ=Asia/Shanghai
-ARG GIT_TAG=no-tag
-ARG LOG_NAME=server
-ARG DB_NAME=kiwi
-ENV LOG_NAME=$LOG_NAME \
+ONBUILD ARG GIT_TAG=no-tag
+ONBUILD ARG LOG_NAME=server
+ONBUILD ARG DB_NAME=kiwi
+ONBUILD ENV LOG_NAME=$LOG_NAME \
     DB_NAME=$DB_NAME \
     GIT_TAG=$GIT_TAG
 ENTRYPOINT sh -c "test '$IMAGE_DEBUG' = TRUE && (echo image debug...;tail -f /dev/stdout) || (python -m kiwi --tag=$GIT_TAG )"
