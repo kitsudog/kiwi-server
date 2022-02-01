@@ -30,7 +30,7 @@ from base.utils import read_file, flatten, load_module, write_file
 from frameworks.actions import Action
 from frameworks.base import Request
 from frameworks.context import Server
-from frameworks.main_server import wsgi_handler, tick_cycle, service_cycle, reg_static_file
+from frameworks.main_server import wsgi_handler, tick_cycle, service_cycle, reg_static_file, reg_static_file2
 from frameworks.sql_model import db
 
 # pretty_errors.configure(
@@ -272,6 +272,9 @@ def api_list(module):
 # noinspection PyUnusedLocal
 @app.route('/<module>/<path>/<file>')
 def module_static(module, path, file):
+    """
+    主要是是弥补没有context_path的
+    """
     return requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content
 
 
@@ -479,6 +482,14 @@ def _main(mode: Iterable[str]):
                                         static_path,
                                         os.path.join(root[len(static_path):], file),
                                     )
+                            for file in os.listdir(static_path):
+                                if os.path.isdir(os.path.join(static_path, file)):
+                                    continue
+                                # 根目录的文件支持模块路径访问
+                                reg_static_file2(
+                                    os.path.join(static_path, file),
+                                    os.path.join(entry, file),
+                                )
 
                     module = all_module[entry] = load_module("modules.%s.main" % entry)
                     Assert("init_server" in module.__dict__, f"模块[{entry}]主需要包含[init_server]方法作为加载后的初始化")

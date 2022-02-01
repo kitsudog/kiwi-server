@@ -239,8 +239,17 @@ __STATIC_FILES = {
 
 
 def reg_static_file(static_root: str, path: str):
+    if not path.startswith("/"):
+        path = "/" + path
     Assert(path not in __STATIC_FILES, f"static资源重复[{path}]")
     __STATIC_FILES[path] = os.path.join(static_root, path[1:] if path[0] == "/" else path)
+
+
+def reg_static_file2(static_path: str, path: str):
+    if not path.startswith("/"):
+        path = "/" + path
+    Assert(path not in __STATIC_FILES, f"static资源重复[{path}]")
+    __STATIC_FILES[path] = static_path
 
 
 def get_file_path(path: str):
