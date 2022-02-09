@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from skywalking.trace.span import NoopSpan
-
 if __name__ == "__main__":
     from gevent import monkey
 
@@ -23,6 +21,7 @@ import requests
 from flask import Flask, request, Response
 from flask_cors import CORS
 from flask_migrate import Migrate
+from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
     has_sentry, json_str, init_sky_walking, has_sky_walking
@@ -275,7 +274,14 @@ def module_static(module, path, file):
     """
     主要是是弥补没有context_path的
     """
-    return requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content
+    from flask import make_response
+    rsp = make_response(requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content)
+    # 继承 mime
+    if mime := mimetypes.guess_type(request.path):
+        rsp.headers['Content-Type'] = mime[0]
+    else:
+        rsp.headers['Content-Type'] = "text/html"
+    return rsp
 
 
 @app.route('/stream', methods=['GET'])
@@ -482,14 +488,12 @@ def _main(mode: Iterable[str]):
                                         static_path,
                                         os.path.join(root[len(static_path):], file),
                                     )
-                            for file in os.listdir(static_path):
-                                if os.path.isdir(os.path.join(static_path, file)):
-                                    continue
-                                # 根目录的文件支持模块路径访问
-                                reg_static_file2(
-                                    os.path.join(static_path, file),
-                                    os.path.join(entry, file),
-                                )
+                            for root, _, files in os.walk(static_path):
+                                for file in files:
+                                    reg_static_file2(
+                                        os.path.join(root, file),
+                                        os.path.join(entry, root[len(static_path):][1:], file),
+                                    )
 
                     module = all_module[entry] = load_module("modules.%s.main" % entry)
                     Assert("init_server" in module.__dict__, f"模块[{entry}]主需要包含[init_server]方法作为加载后的初始化")
