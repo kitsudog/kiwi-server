@@ -360,13 +360,15 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                 content_disposition[k] = v
                                 if k == "name":
                                     raw_bytes = each[content_start:-2]
-                                    content_type = head_dict.get("content-type", "text").lower()
-                                    if content_type.endswith("octet-stream") \
-                                            or content_type.startswith("image/") \
-                                            or content_type.startswith("video/"):
-                                        _params_tmp[v].append(ActionBytes(raw_bytes))
-                                    else:
+                                    content_type = head_dict.get("content-type", "text/plain").lower()
+                                    content_type1, _, content_type2 = content_type.partition("/")
+                                    if content_type1 == "text" or content_type in {
+                                        "application/javascript", "image/svg+xml",
+                                    }:
                                         _params_tmp[v].append(raw_bytes.decode("utf-8"))
+                                    else:
+                                        _params_tmp[v].append(ActionBytes(raw_bytes))
+
                     for k, v in _params_tmp.items():
                         if len(v) == 1:
                             params[k] = v[0]
