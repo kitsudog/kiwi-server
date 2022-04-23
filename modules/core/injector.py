@@ -112,20 +112,29 @@ class LDAPAuthInjector(BasicAuthInjector):
             raise e
 
 
-class JWTInjector(Action.Injector):
-    def verify_param(self):
-        Assert(self.param == "__jwt", f"命名必须是__jwt")
+if CORE_JWT_SECRET:
+    class JWTInjector(Action.Injector):
+        def verify_param(self):
+            Assert(self.param == "__jwt", f"命名必须是__jwt")
 
-    # noinspection PyBroadException
-    def from_req(self, req: Request) -> any:
-        auth = req.params["#raw#"].get("HTTP_AUTHORIZATION")
-        FBCode.CODE_缺少AUTH(auth)
-        FBCode.CODE_缺少AUTH(auth.lower().startswith("bearer "))
-        try:
-            ret: JWTPayload = jwt.decode(
-                auth[len("bearer "):], key=CORE_JWT_SECRET, algorithms=[CORE_JWT_ALGORITHMS],
-                options={"verify_exp": True, "verify_aud": False},
-            )
-            return ret
-        except Exception:
-            FBCode.CODE_尚未登录(False)
+        # noinspection PyBroadException
+        def from_req(self, req: Request) -> any:
+            auth = req.params["#raw#"].get("HTTP_AUTHORIZATION")
+            FBCode.CODE_缺少AUTH(auth)
+            FBCode.CODE_缺少AUTH(auth.lower().startswith("bearer "))
+            try:
+                ret: JWTPayload = jwt.decode(
+                    auth[len("bearer "):], key=CORE_JWT_SECRET, algorithms=[CORE_JWT_ALGORITHMS],
+                    options={"verify_exp": True, "verify_aud": False},
+                )
+                return ret
+            except Exception as e:
+                FBCode.CODE_尚未登录(False)
+else:
+    class InvalidJWTInjector(Action.Injector):
+        def verify_param(self):
+            Assert(self.param == "__jwt", f"命名必须是__jwt")
+
+        # noinspection PyBroadException
+        def from_req(self, req: Request) -> any:
+            FBCode.CODE_无法登陆(False, param_func=lambda: {"value": "CORE_JWT_SECRET没设置"})

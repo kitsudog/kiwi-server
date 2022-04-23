@@ -1150,3 +1150,4 @@ class FBCode(Code):
     CODE_框架错误 = Code(1114, "server error", status_code=500)
     CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401)
     CODE_不支持会话 = Code(1116, "server error", status_code=500)
+    CODE_无法登陆 = Code(1117, "unauthorized", "无法登陆[${value}]", status_code=401)

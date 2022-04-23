@@ -13,6 +13,7 @@ from frameworks.main_server import forward_response
 from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
+from modules.core.injector import JWTPayload
 from modules.core.utils import markdown_html
 
 
@@ -288,6 +289,11 @@ def api_list(module="*"):
 
 @GetAction
 def auth(__basic_auth):
+    return ""
+
+
+@GetAction
+def jwt_auth(__jwt: JWTPayload):
     return ""
 
 
