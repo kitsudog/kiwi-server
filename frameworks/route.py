@@ -16,18 +16,19 @@ class HTTPRequestHandler:
         self.module = module
         self.cmd = cmd
         self.url = url
+        self.cmd_url = url + cmd.replace(".", "/")
         self.__name__ = f"{module}:{cmd}"
 
     def __call__(self, request: Request):
         params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
-        Log(f"forward[{self.url}{self.cmd}][{json_str(params)[:1000]}]")
+        Log(f"forward[{self.cmd_url}][{json_str(params)[:1000]}]")
         start = now()
-        rsp = requests.post(f"{self.url}{self.cmd}", json=params, headers={
+        rsp = requests.post(f"{self.cmd_url}", json=params, headers={
             "d-token": request.session.get_token(),
         })
         cost = now() - start
         if cost > 3000:
-            Log(f"forward[{self.url}{self.cmd}][{json_str(params)[:1000]}]cost[{cost}ms]")
+            Log(f"forward[{self.cmd_url}][{json_str(params)[:1000]}]cost[{cost}ms]")
         result = rsp.json()
         if result.get("ret") == 0:
             return Response(result["ret"], result["result"], result["cmd"])
@@ -48,6 +49,9 @@ class Router(IMinService):
         # 加载远端的接口
         for module, config in db_config.hgetall("module").items():
             config = str_json(config)
+            Assert(isinstance(config["cmd"], list))
+            Assert(config["url"])
+            Assert(config["url"].endswith("/"))
             self.reg_remote_http_handler(module, config["url"], config["cmd"])
 
     def cycle_min(self):
