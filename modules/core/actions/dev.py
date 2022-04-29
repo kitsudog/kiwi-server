@@ -232,10 +232,27 @@ def api_list(module="*"):
                 "describe": desc(action),
                 "comment": comment(action),
             })
-        module_set = set(map(lambda x: x["module"], tmp))
-        module_max_len = max([len(each) + 4 for each in module_set])
-        api_max_len = max([len(each['api']) for each in tmp])
-        action_max_len = max([max(map(lambda x: len(x), each['describe'] or [""])) for each in tmp])
+        if not len(tmp):
+            for api, action in sorted(DefaultRouter.router_map.items(), key=lambda x: x[0]):  # type: str, FastAction
+                if api.startswith(module + "."):
+                    tmp.append({
+                        "module": action.module,
+                        "api": api,
+                        "action": action,
+                        "describe": desc(action),
+                        "comment": comment(action),
+                    })
+
+        if len(tmp):
+            module_set = set(map(lambda x: x["module"], tmp))
+            module_max_len = max([len(each) + 4 for each in module_set])
+            api_max_len = max([len(each['api']) for each in tmp])
+            action_max_len = max([max(map(lambda x: len(x), each['describe'] or [""])) for each in tmp])
+        else:
+            module_set = set()
+            module_max_len = 0
+            api_max_len = 0
+            action_max_len = 0
 
         # noinspection PyShadowingNames
         def to_table(data):

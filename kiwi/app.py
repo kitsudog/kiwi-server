@@ -269,8 +269,30 @@ def api_list(module):
 
 
 # noinspection PyUnusedLocal
+@app.route('/<module>/<module2>/api_list')
+def api2_list(module, module2):
+    return requests.get(f"http://127.0.0.1:{8000}/admin/api_list?module={module2}").content
+
+
+# noinspection PyUnusedLocal
 @app.route('/<module>/<path>/<file>')
 def module_static(module, path, file):
+    """
+    主要是是弥补没有context_path的
+    """
+    from flask import make_response
+    rsp = make_response(requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content)
+    # 继承 mime
+    if mime := mimetypes.guess_type(request.path):
+        rsp.headers['Content-Type'] = mime[0]
+    else:
+        rsp.headers['Content-Type'] = "text/html"
+    return rsp
+
+
+# noinspection PyUnusedLocal
+@app.route('/<module>/<module2>/<path>/<file>')
+def module2_static(module, module2, path, file):
     """
     主要是是弥补没有context_path的
     """
