@@ -8,7 +8,7 @@ from re import Pattern
 from typing import Optional, Callable, Type, List, Iterable, Dict
 
 from base.style import Fail, Log, profiler_logger, FailError, Trace, T, str_json_a, Assert, NoThing, Block, str_json, \
-    is_debug, SentryBlock
+    is_debug, SentryBlock, DevError, DevNever
 from base.utils import DecorateHelper, dump_func, str_to_bool, base64decode, load_class, typing_inspect
 from frameworks.base import Request, Response, IPacket, TextResponse, ErrorResponse, ChunkPacket
 from frameworks.models import BaseDef
@@ -280,6 +280,7 @@ class Action(FastAction):
                     return int(value)
                 except Exception:
                     FBCode.CODE_参数不是数字(False, param_func=lambda: {
+                        "param": self.alias,
                         "value": value,
                     })
             return int(value)
@@ -298,6 +299,7 @@ class Action(FastAction):
                 return float(value)
             except Exception:
                 FBCode.CODE_参数不是小数(False, param_func=lambda: {
+                    "param": self.alias,
                     "value": value,
                 })
 
@@ -325,6 +327,7 @@ class Action(FastAction):
                 elif value == "false":
                     return False
             FBCode.CODE_参数不是合法布尔值(False, param_func=lambda: {
+                "param": self.alias,
                 "value": value,
             })
 
@@ -339,7 +342,7 @@ class Action(FastAction):
             int_value = super().from_str_value(value)
             hint: BaseDef = self.type_hint
             ret = hint.by_id(int_value, fail=False)
-            FBCode.CODE_参数不正确(ret, param_func=lambda: {
+            FBCode.CODE_UUID参数不正确(ret, param_func=lambda: {
                 "uuid": value,
                 "param": self.alias,
                 "hint": self.type_hint.__name__,
@@ -357,6 +360,7 @@ class Action(FastAction):
             if not value[0] == "{":
                 if not value.strip().startswith("{"):
                     raise FBCode.CODE_参数不是JSON(False, param_func=lambda: {
+                        "param": self.alias,
                         "value": value if len(value) < 1000 else f"{value[:100]}...{value[-100:]}"
                     })
             return str_json(value)
@@ -374,7 +378,10 @@ class Action(FastAction):
             self.sub_type = typing_inspect(self.orig_hint)["sub_type"]
 
         def verify_value(self, value):
-            Assert(isinstance(value, list), f"值[{value}]不是[list]")
+            FBCode.CODE_参数格式不对(isinstance(value, list), param_func=lambda: {
+                "param": self.alias,
+                "error": f"值[{value}]不是[list]",
+            })
 
         def from_str_value(self, value: str):
             if value.startswith("["):
@@ -388,6 +395,7 @@ class Action(FastAction):
                     return [str_to_bool(value)]
                 else:
                     FBCode.CODE_参数不是合法数组(False, param_func=lambda: {
+                        "param": self.alias,
                         "value": value,
                     })
 
@@ -395,6 +403,7 @@ class Action(FastAction):
             if isinstance(value, collections.Iterable):
                 return list(value)
             FBCode.CODE_参数不是合法数组(False, param_func=lambda: {
+                "param": self.alias,
                 "value": value,
             })
 
@@ -418,6 +427,7 @@ class Action(FastAction):
                     return {str_to_bool(value)}
                 else:
                     FBCode.CODE_参数不是合法集合(False, param_func=lambda: {
+                        "param": self.alias,
                         "value": value,
                     })
 
@@ -425,6 +435,7 @@ class Action(FastAction):
             if isinstance(value, collections.Iterable):
                 return set(value)
             FBCode.CODE_参数不是合法集合(False, param_func=lambda: {
+                "param": self.alias,
                 "value": value,
             })
 
@@ -443,7 +454,10 @@ class Action(FastAction):
             self.default_value = NONE
 
         def verify_value(self, value):
-            Assert(value in self.value_set, f"[{value}]枚举的值必须在范围[{self.value_set}]内")
+            FBCode.CODE_参数格式不对(value in self.value_set, param_func=lambda: {
+                "param": self.alias,
+                "error": f"[{value}]枚举的值必须在范围[{self.value_set}]内",
+            })
 
         def from_str_value(self, value: str):
             value: int = super().from_str_value(value)
@@ -470,10 +484,16 @@ class Action(FastAction):
 
         # noinspection PyTypeChecker
         def prepare(self):
-            Assert(isinstance(self.default_value, set), "必须指定`set`")
+            FBCode.CODE_参数格式不对(isinstance(self.default_value, set), param_func=lambda: {
+                "param": self.alias,
+                "error": "必须指定`set`",
+            })
             self.value_set = set(self.default_value)
             for each in self.value_set:
-                Assert(isinstance(each, str) or isinstance(each, int), "枚举的元素必须是`str`或者`int`")
+                FBCode.CODE_参数格式不对(isinstance(each, str) or isinstance(each, int), param_func=lambda: {
+                    "param": self.alias,
+                    "error": "枚举的元素必须是`str`或者`int`",
+                })
             self.default_value = NONE
 
         def verify_value(self, value):
@@ -561,15 +581,24 @@ class Action(FastAction):
             Assert(issubclass(self.sub_type, Enum))
 
         def verify_value(self, value):
-            Assert(isinstance(value, Iterable), "数据必须可以迭代")
+            FBCode.CODE_参数格式不对(isinstance(value, Iterable), param_func=lambda: {
+                "param": self.alias,
+                "error": "数据必须可以迭代",
+            })
             for each in value:
                 if isinstance(each, Enum):
-                    Assert(type(each) is self.sub_type, "类型不对")
+                    FBCode.CODE_参数格式不对(type(each) is self.sub_type, param_func=lambda: {
+                        "param": self.alias,
+                        "error": "类型不对",
+                    })
                 else:
                     raise Fail(f"不支持的类型[{value}]")
 
         def from_value(self, value):
-            Assert(isinstance(value, Iterable), "数据必须可以迭代")
+            FBCode.CODE_参数格式不对(isinstance(value, Iterable), param_func=lambda: {
+                "param": self.alias,
+                "error": "数据必须可以迭代",
+            })
             if isinstance(value, str):
                 return self.from_str_value(value)
             ret = set()
@@ -647,7 +676,10 @@ class Action(FastAction):
                 pass
 
         def from_str_value(self, value: str):
-            Assert(self.pattern.fullmatch(value), f"参数[alias={self.alias}]格式不匹配[{self.pattern}]")
+            FBCode.CODE_参数格式不对(self.pattern.fullmatch(value), param_func=lambda: {
+                "param": self.alias,
+                "error": f"格式不匹配[{self.pattern}]",
+            })
             return value
 
     class StreamInjector(Injector):
@@ -766,6 +798,8 @@ class Action(FastAction):
                                                      param=param)
                             injector = _injector.valid()
                             self.__reason_dict[param][injector_cls] = "ok"
+                        except DevError as e:
+                            raise e
                         except Exception as e:
                             self.__reason_dict[param][injector_cls] = e
                 if injector is None:
@@ -1061,6 +1095,12 @@ class Code:
 
     def gen_msg_func(self, msg, param: Dict):
         for each in self.need_param:
+            msg = msg.replace(each["src"], str(param[each.get("param", "🐒")]))
+        return msg
+
+    # noinspection PyPep8Naming
+    def gen_msg_funcA(self, msg, param: Dict):
+        for each in self.need_param:
             msg = msg.replace(each["src"], str(param[each["param"]]))
         return msg
 
@@ -1108,7 +1148,10 @@ class Code:
                     kwargs.update(param)
                 if param_str:
                     self.__param_str_to_dict(param_str, kwargs)
-                self.gen_msg_func(self.internal_msg, kwargs)
+                try:
+                    self.gen_msg_funcA(self.internal_msg, kwargs)
+                except Exception:
+                    raise DevNever("无法构造错误提示")
         if not bool(expr):
             if param_func or param or kwargs or param_str:
                 if param_func:
@@ -1134,14 +1177,14 @@ class Code:
 
 # noinspection NonAsciiCharacters
 class FBCode(Code):
-    CODE_参数不正确 = Code(1101, "invalid request", "[${param}=${hint}:${uuid}]不存在", status_code=400)
-    CODE_UUID参数不正确 = Code(1102, "invalid request", "[${param}=${hint}:${uuid}]不存在", status_code=400)
+    CODE_参数不正确 = Code(1101, "invalid request [param=${param}]", "[${param}=${hint}]不存在", status_code=400)
+    CODE_UUID参数不正确 = Code(1102, "invalid request [param=${param}]", "[${param}=${hint}:${uuid}]不存在", status_code=400)
     CODE_尚未登录 = Code(1103, "unauthorized", status_code=401)
-    CODE_参数不是数字 = Code(1104, "invalid request", "参数不是数字[${value}]", status_code=400)
-    CODE_参数不是小数 = Code(1105, "invalid request", "参数不是小数[${value}]", status_code=400)
-    CODE_参数不是合法布尔值 = Code(1106, "invalid request", "参数不是合法布尔值[${value}]", status_code=400)
-    CODE_参数不是合法数组 = Code(1107, "invalid request", "参数不是合法数组[${value}]", status_code=400)
-    CODE_参数不是合法集合 = Code(1108, "invalid request", "参数不是合法集合[${value}]", status_code=400)
+    CODE_参数不是数字 = Code(1104, "invalid request [param=${param}]", "参数不是数字[${value}]", status_code=400)
+    CODE_参数不是小数 = Code(1105, "invalid request [param=${param}]", "参数不是小数[${value}]", status_code=400)
+    CODE_参数不是合法布尔值 = Code(1106, "invalid request [param=${param}]", "参数不是合法布尔值[${value}]", status_code=400)
+    CODE_参数不是合法数组 = Code(1107, "invalid request [param=${param}]", "参数不是合法数组[${value}]", status_code=400)
+    CODE_参数不是合法集合 = Code(1108, "invalid request [param=${param}]", "参数不是合法集合[${value}]", status_code=400)
     CODE_参数不是JSON = Code(1109, "invalid request", "参数不是合法JSON[${value}]", status_code=400)
     CODE_缺少AUTH = Code(1110, "unauthorized", status_code=401)
     CODE_参数类型不对 = Code(1111, "invalid request", status_code=400)
@@ -1151,3 +1194,4 @@ class FBCode(Code):
     CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401)
     CODE_不支持会话 = Code(1116, "server error", status_code=500)
     CODE_无法登陆 = Code(1117, "unauthorized", "无法登陆[${value}]", status_code=401)
+    CODE_参数格式不对 = Code(1118, "invalid request [${param}]", "参数[${param}]格式不对[${error}]", status_code=400)

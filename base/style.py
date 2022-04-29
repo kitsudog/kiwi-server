@@ -470,6 +470,10 @@ class FailError(Exception):
             self.msg = msg
 
 
+class DevError(FailError):
+    pass
+
+
 # noinspection PyPep8Naming
 def Fail(msg, *args, **kwargs) -> NoReturn:
     msg = str(msg).__mod__(args)
@@ -478,11 +482,17 @@ def Fail(msg, *args, **kwargs) -> NoReturn:
     raise FailError(kwargs.get("ret", -1), msg)
 
 
+# noinspection PyPep8Naming
 def Never() -> NoReturn:
     raise FailError(-99, "不应该到这里的")
 
 
-# noinspection PyBroadException
+# noinspection PyPep8Naming
+def DevNever(msg="未知异常"):
+    raise DevError(-999, f"开发异常尽快处理[{msg}]")
+
+
+# noinspection PyBroadException,PyPep8Naming
 def Tries(title: str, tries: int, func: Callable, *args, **kwargs) -> any:
     """
     多次重试
@@ -495,7 +505,7 @@ def Tries(title: str, tries: int, func: Callable, *args, **kwargs) -> any:
     raise Fail(title)
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyPep8Naming
 def AnyOne(*func, fail: str = "无一可用") -> any:
     for each in func:
         try:
@@ -591,6 +601,7 @@ class SentryBlock:
             else:
                 self.span = sentry_sdk.start_transaction(op=op, name=name, description=description, sampled=sampled)
 
+    # noinspection PyUnresolvedReferences
     def __enter__(self) -> sentry_sdk.tracing.Span:
         if self.sw_span:
             self.sw_span.__enter__()
@@ -678,7 +689,7 @@ class Block:
         return not self.fail
 
 
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyPep8Naming
 def Suicide(msg: str, /, *, code: int = 1) -> NoReturn:
     """
     确保死掉
@@ -688,6 +699,7 @@ def Suicide(msg: str, /, *, code: int = 1) -> NoReturn:
     os._exit(code)
 
 
+# noinspection PyPep8Naming
 def NeverLog(msg: str) -> NoReturn:
     Log(f"[NEVER] {msg}")
 
@@ -718,6 +730,7 @@ def Log(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -> 
     _logger.info(out)
 
 
+# noinspection PyPep8Naming
 def Error(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -> NoReturn:
     """
     [ts] first msg
@@ -743,10 +756,12 @@ def Error(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -
     _logger.error(out)
 
 
+# noinspection PyPep8Naming
 def Profile(msg) -> NoReturn:
     Log(msg, _logger=profiler_logger)
 
 
+# noinspection PyPep8Naming
 def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None) -> NoReturn:
     if e is None:
         Log(("%s\n" % msg) + "".join(traceback.format_stack()), first="[TRACE] + ", prefix="[TRACE] - ")
@@ -768,6 +783,7 @@ def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None) 
             raise e
 
 
+# noinspection PyPep8Naming
 def Catch(func: Callable[[], any]) -> NoReturn:
     """
     负责收集异常前的信息

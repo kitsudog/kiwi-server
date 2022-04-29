@@ -369,3 +369,9 @@ def chunk4(__stream: ChunkStream):
 @GetAction
 def forward_test():
     return forward(None, "manager.user_by_user_id", param={})
+
+
+# noinspection PyUnusedLocal,PyDefaultArgument
+@GetAction
+def param_test(a: List = [], b: Set = set()):
+    pass
