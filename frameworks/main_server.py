@@ -256,6 +256,9 @@ def get_file_path(path: str):
     return __STATIC_FILES.get(path, f"static{path}")
 
 
+ALLOW_ORIGIN = os.environ.get("ALLOW_ORIGIN")
+
+
 # noinspection DuplicatedCode,PyListCreation
 def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] = None, *, sw_span: Span):
     method = environ.get("REQUEST_METHOD")
@@ -409,7 +412,17 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
         handler = DefaultRouter.get(cmd, fail=False)
     if method == "OPTIONS":
         ret = list()
-        ret.append(("Access-Control-Allow-Origin", "*"))
+        # ret.append(("Access-Control-Allow-Origin", "*"))
+        if ALLOW_ORIGIN:
+            ret.append(("Access-Control-Allow-Origin", ALLOW_ORIGIN))
+        else:
+            if origin := environ.get("HTTP_ORIGIN") or environ.get("HTTP_REFERER"):
+                if origin.startswith("https"):
+                    ret.append(("Access-Control-Allow-Origin", f"https://{origin[8:].partition('/')[0]}"))
+                else:
+                    # noinspection HttpUrlsUsage
+                    ret.append(("Access-Control-Allow-Origin", f"http://{origin[7:].partition('/')[0]}"))
+
         ret.append(("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
         ret.append(("Access-Control-Allow-Headers", OPTIONS_HEADERS_STR))
         start_response('200 OK', ret)
@@ -440,7 +453,16 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                         action=handler)
                 ret = []
                 with Block("CROS"):
-                    ret.append(("Access-Control-Allow-Origin", "*"))
+                    # ret.append(("Access-Control-Allow-Origin", "*"))
+                    if ALLOW_ORIGIN:
+                        ret.append(("Access-Control-Allow-Origin", ALLOW_ORIGIN))
+                    else:
+                        if origin := environ.get("HTTP_ORIGIN") or environ.get("HTTP_REFERER"):
+                            if origin.startswith("https"):
+                                ret.append(("Access-Control-Allow-Origin", f"https://{origin[8:].partition('/')[0]}"))
+                            else:
+                                # noinspection HttpUrlsUsage
+                                ret.append(("Access-Control-Allow-Origin", f"http://{origin[7:].partition('/')[0]}"))
                 with Block("会话部分"):
                     if params.get("c_d-token") != (_d_token := _session.get_token()):
                         # cookie不对
