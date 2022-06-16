@@ -323,7 +323,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                 else:
                     content = _in.readlines()
                     content = b'\r\n'.join(content)
-                if content_type == "application/x-www-form-urlencoded":
+                if content_type.startswith("application/x-www-form-urlencoded"):
                     content = content.decode("utf-8")
                 elif content_type.startswith("application/json"):
                     content = content.decode("utf-8")
