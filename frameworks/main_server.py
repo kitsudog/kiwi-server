@@ -83,18 +83,18 @@ def reg_handler(*, path: str, module, verbose=True):
             if path != action_name:
                 # 两点式
                 cmd = f"{path}.{action_name}.{key}"
-                DefaultRouter.reg_handler(cmd, value)
+                DefaultRouter.reg_handler(cmd, value, overwrite=True)
                 value.post_register(cmd, verbose=verbose)
                 # 一点式
                 cmd = f"{path}.{key}"
-                DefaultRouter.reg_handler(cmd, value, ignore_exist=True)
+                DefaultRouter.reg_handler(cmd, value, overwrite=True, ignore_exist=True)
                 value.post_register(cmd, verbose=verbose)
             if _action_name == "main" and module_name != path:
                 cmd = f"{module_name}.{key}"
-                DefaultRouter.reg_handler(cmd, value, ignore_exist=True)
+                DefaultRouter.reg_handler(cmd, value, overwrite=True, ignore_exist=True)
                 value.post_register(cmd, verbose=verbose)
             cmd = f"{action_name}.{key}"
-            DefaultRouter.reg_handler(cmd, value)
+            DefaultRouter.reg_handler(cmd, value, overwrite=True)
             value.post_register(cmd, verbose=verbose)
 
 
