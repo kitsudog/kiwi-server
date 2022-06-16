@@ -77,7 +77,11 @@ class Router(IMinService):
         for each in cmd:
             action = ForwardAction(HTTPRequestHandler(module, each, url))
             action.module = f"{module}@{url}"
-            self.router_map[each] = action
+            if isinstance(self.router_map[cmd], ForwardAction):
+                # 面对forward类的就自动更新
+                self.reg_handler(each, action, overwrite=True)
+            else:
+                pass
 
     def reg_handler(self, cmd: str, handler, overwrite=False, ignore_exist=False):
         """
