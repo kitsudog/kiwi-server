@@ -42,6 +42,30 @@ def reg_get_handler_ex(*, path: str, action: GetAction):
     DefaultRouter.GET_HANDLER[f"/{path}"] = action
 
 
+def cancel_get_alias(*, path: str):
+    """
+    注销掉规则
+    """
+    if not DefaultRouter.GET_HANDLER[path]:
+        return
+    # todo: 不能随意删除alias以外的
+    del DefaultRouter.GET_HANDLER[path]
+
+
+def reg_get_alias(*, path: str, target: GetAction, override=False):
+    """
+    额外的简单规则
+    """
+    FBCode.CODE_框架错误(path)
+    if path[0] != "/":
+        path = "/" + path
+    if DefaultRouter.GET_HANDLER.get(path):
+        FBCode.CODE_重复的路由规则(override, param_func=lambda: {
+            "path": path,
+        })
+    DefaultRouter.GET_HANDLER[path] = target
+
+
 def reg_handler(*, path: str, module, verbose=True):
     """
     注册handler

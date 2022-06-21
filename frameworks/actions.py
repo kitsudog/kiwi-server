@@ -1195,3 +1195,4 @@ class FBCode(Code):
     CODE_不支持会话 = Code(1116, "server error", status_code=500)
     CODE_无法登陆 = Code(1117, "unauthorized", "无法登陆[${value}]", status_code=401)
     CODE_参数格式不对 = Code(1118, "invalid request [${param}]", "参数[${param}]格式不对[${error}]", status_code=400)
+    CODE_重复的路由规则 = Code(1119, "invalid route", "invalid route[${path}]", status_code=400)

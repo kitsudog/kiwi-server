@@ -17,7 +17,6 @@ import click
 import flask_migrate
 import gevent
 import requests
-# import pretty_errors
 from flask import Flask, request, Response
 from flask_cors import CORS
 from flask_migrate import Migrate

@@ -1,7 +1,8 @@
 from itertools import chain
 
 from base.style import str_json, Log, Trace, date_str, Block, date_str8, now
-from frameworks.actions import Action
+from frameworks.actions import Action, GetAction
+from frameworks.base import HTMLPacket
 from frameworks.redis_mongo import db_model, mongo_set, db_model_ex, db_keys_iter, db_stats_ex, mongo_pack_set
 
 
@@ -89,3 +90,14 @@ def sync_all_model(delete_ts=0, delete=True):
         except Exception as e:
             Trace("导出数据时出现错误[%s]" % key, e)
     Log("sync Success")
+
+
+@GetAction
+def hello():
+    return HTMLPacket("""\
+<html>
+<body>
+    <h1>hello world</h1>
+</body>
+</html>
+""")
