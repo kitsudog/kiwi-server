@@ -551,7 +551,11 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                         sw_span.tag(TagHttpStatusCode(rsp.status_code()))
                     return iter(chunk)
                 else:
-                    content = rsp.to_write_data()
+                    if rsp.status_code() == 302:
+                        ret.append(("Location", rsp.to_write_data().decode("utf8")))
+                        content = b""
+                    else:
+                        content = rsp.to_write_data()
                     if len(content) > 200 and environ.get("HTTP_ACCEPT_ENCODING", "").find("gzip") >= 0:
                         with Block("Gzip"):
                             gzip_buffer = BytesIO()

@@ -352,12 +352,9 @@ class Response(JsonPacket):
         return rsp
 
 
-class RedirectResponse(Response):
-    def __init__(self):
-        super().__init__(0, {})
-
-    def status_code(self):
-        return 302
+class RedirectResponse(HTMLPacket):
+    def __init__(self, location: str):
+        super().__init__(location, status=302)
 
 
 class ConsoleResponse(Response):

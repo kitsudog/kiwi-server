@@ -7,7 +7,7 @@ import requests
 
 from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
-from frameworks.base import ChunkPacket, ChunkStream
+from frameworks.base import ChunkPacket, ChunkStream, RedirectResponse
 from frameworks.context import DefaultRouter
 from frameworks.main_server import forward_response, forward
 from frameworks.redis_mongo import db_other, db_config
@@ -392,3 +392,8 @@ def forward_test():
 @GetAction
 def param_test(a: List = [], b: Set = set()):
     pass
+
+
+@GetAction
+def redirect_baidu():
+    return RedirectResponse("https://www.baidu.com")
