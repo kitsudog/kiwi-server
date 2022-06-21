@@ -5,7 +5,7 @@ def init_server():
     from .actions import dev, main
     reg_handler(path="admin", module=dev)
     reg_handler(path="admin", module=main)
-    reg_get_not_found(path_prefix="/echo/", target=main.hello, auto=True)
+    reg_get_not_found(path_prefix="/", target=main.hello, auto=False)
     reg_get_alias(path="/admin/1573", target=main.hello)
 
 
