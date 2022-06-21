@@ -66,6 +66,21 @@ def reg_get_alias(*, path: str, target: GetAction, override=False):
     DefaultRouter.GET_HANDLER[path] = target
 
 
+def reg_get_not_found(*, path_prefix: str, target: GetAction, auto: bool = False):
+    """
+    针对丢失的情况处理
+    """
+    # todo: 避免重复
+    FBCode.CODE_框架错误(path_prefix)
+    if not path_prefix.startswith("/"):
+        path_prefix = "/" + path_prefix
+    DefaultRouter.EX_GET_HANDLER.append({
+        "path": path_prefix,
+        "handler": target,
+        "auto": auto,
+    })
+
+
 def reg_handler(*, path: str, module, verbose=True):
     """
     注册handler
@@ -408,6 +423,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     params.update(parse_form_url(content))
     params["#content#"] = content
     params["$__content"] = content
+    params["$__path"] = path
     path_list = path[1:].split("/")
     cmd: str = ".".join(path_list)
     if len(cookies):
@@ -430,8 +446,18 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
     sw_span.peer = '%s:%s' % (_ip, environ["REMOTE_PORT"])
     if method == "GET":
         handler = DefaultRouter.GET_HANDLER.get(path, None)
-        if not handler and len(path_list) > 2:
-            handler = DefaultRouter.GET_HANDLER.get("/" + "/".join(path_list[:2]), None)
+        if not handler:
+            if len(path_list) > 2:
+                # todo: 改为alias规则
+                handler = DefaultRouter.GET_HANDLER.get("/" + "/".join(path_list[:2]), None)
+        if not handler:
+            # 开始ex_get
+            for each in DefaultRouter.EX_GET_HANDLER:
+                if path.startswith(each["path"]):
+                    handler = each["handler"]
+                    with Block("自动注入一个alias", expr=each.get("auto")):
+                        Log(f"注入alias[{path}]")
+                        reg_get_alias(path=path, target=handler)
     else:
         handler = DefaultRouter.get(cmd, fail=False)
     if method == "OPTIONS":

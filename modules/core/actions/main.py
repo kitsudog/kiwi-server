@@ -93,11 +93,11 @@ def sync_all_model(delete_ts=0, delete=True):
 
 
 @GetAction
-def hello():
-    return HTMLPacket("""\
+def hello(__path):
+    return HTMLPacket(f"""\
 <html>
 <body>
-    <h1>hello world</h1>
+    <h1>hello world [{__path}]</h1>
 </body>
 </html>
 """)

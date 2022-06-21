@@ -1,10 +1,10 @@
 # -*- coding:utf-8 -*-
-from typing import Callable, Dict, Optional, List
+from typing import Callable, Dict, Optional, List, TypedDict
 
 import requests
 from base.interface import IMinService
 from base.style import Fail, Log, Assert, str_json, json_str, now, has_sky_walking
-from frameworks.actions import FastAction
+from frameworks.actions import FastAction, GetAction
 from frameworks.base import Response, Request, ServerError
 from frameworks.redis_mongo import db_config
 from frameworks.server_context import RouterContext
@@ -43,6 +43,12 @@ class ForwardAction(FastAction):
         return self.func(request)
 
 
+class ExGetHandlerConfig(TypedDict):
+    path: str
+    handler: GetAction
+    auto: bool
+
+
 class Router(IMinService):
 
     def update_remote_module(self):
@@ -63,6 +69,8 @@ class Router(IMinService):
     GET_HANDLER = {
 
     }
+
+    EX_GET_HANDLER: List[ExGetHandlerConfig] = []
 
     def __init__(self):
         self.router_map = {}  # type:Dict[str:Callable[[Request], Response]]
