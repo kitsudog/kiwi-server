@@ -23,9 +23,15 @@ class HTTPRequestHandler:
         params = dict(filter(lambda kv: kv[0][0] not in {"$", "#", "_"}, request.params.items()))
         Log(f"forward[{self.cmd_url}][{json_str(params)[:1000]}]")
         start = now()
-        rsp = requests.post(f"{self.cmd_url}", json=params, headers={
-            "d-token": request.session.get_token(),
-        })
+        if auth := request.session.get_auth():
+            rsp = requests.post(f"{self.cmd_url}", json=params, headers={
+                "d-token": request.session.get_token(),
+                "authorization": auth,
+            })
+        else:
+            rsp = requests.post(f"{self.cmd_url}", json=params, headers={
+                "d-token": request.session.get_token(),
+            })
         cost = now() - start
         if cost > 3000:
             Log(f"forward[{self.cmd_url}][{json_str(params)[:1000]}]cost[{cost}ms]")

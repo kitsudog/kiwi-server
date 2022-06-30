@@ -45,6 +45,7 @@ class SessionContext(Context):
         self.__session_id = 0
         self.__uuid = ""
         self.__token = ""
+        self.__auth = ""
         self.__expire = 0
         self.__last = now()
         self.__ip = ""
@@ -135,12 +136,18 @@ class SessionContext(Context):
     def set_token(self, value):
         self.__token = value
 
+    def set_auth(self, value):
+        self.__auth = value
+
     @property
     def is_login(self) -> bool:
         return "" != self.__uuid
 
     def get_token(self) -> str:
         return self.__token
+
+    def get_auth(self) -> str:
+        return self.__auth
 
 
 class RouterContext(object):
