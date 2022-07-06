@@ -18,6 +18,7 @@ from base.utils import flatten
 
 ExprTelPhone = re.compile(r'1\d{10}')
 ExprTelPhoneEx = re.compile(r'(13[0-9]|14[01456879]|15[0-3,5-9]|16[2567]|17[0-8]|18[0-9]|19[0-3,5-9])\d{8}')
+ExprEmail = re.compile(r'[A-Za-z0-9._+-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+')
 ExprIP = re.compile(r'((25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))')
 ExprInt = re.compile(r'-?\d+')
 ExprInt2 = re.compile(r'(-?\d+)(:-?\d+)?')
@@ -112,7 +113,7 @@ def valid_email(src):
     """
     合法的邮箱
     """
-    pass
+    Assert(ExprEmail.match(src), "email[%s] error", src)
 
 
 def valid_phone(src):
