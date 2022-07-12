@@ -35,6 +35,7 @@ class BasicAuthInjector(Action.Injector):
             raise FrameworkException("缺少auth", NeedBasicAuthPacket())
         try:
             username, _, password = base64decode2str(auth[6:]).partition(":")
+            req.session.set_auth(auth)
             return username, password
         except Exception:
             FBCode.CODE_尚未登录(False)
