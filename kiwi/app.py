@@ -407,10 +407,10 @@ def startup(forever=True):
         if not is_dev() and not is_debug():
             inactive_console()
         if is_dev():
-            app.run(host="0.0.0.0", port=8000, debug=True)
+            app.run(host="0.0.0.0", port=int(os.environ.get("KIWI_PORT", 8000)), debug=True)
         else:
             from gevent import pywsgi
-            pywsgi.WSGIServer(('', 8000), application=app, log=None).serve_forever()
+            pywsgi.WSGIServer(('', int(os.environ.get("KIWI_PORT", 8000))), application=app, log=None).serve_forever()
     else:
         # for wsgi
         print("wait for wsgi")
