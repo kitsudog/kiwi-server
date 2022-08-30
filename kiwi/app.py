@@ -517,7 +517,8 @@ def _main(mode: Iterable[str]):
                                     )
 
                     module = all_module[entry] = load_module("modules.%s.main" % entry)
-                    Assert("init_server" in module.__dict__, f"模块[{entry}]主需要包含[init_server]方法作为加载后的初始化")
+                    Assert("init_server" in module.__dict__,
+                           f"模块[{entry}]主需要包含[init_server]方法作为加载后的初始化")
                     Assert("prepare" in module.__dict__, f"模块[{entry}]主需要包含[prepare]方法作为模块启动初始化")
                     module.__dict__["init_server"]()
 

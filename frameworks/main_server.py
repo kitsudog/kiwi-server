@@ -310,7 +310,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
     content = ""
     params = {"#raw#": environ}
     sw_span.layer = Layer.Http
-    sw_span.component = Component.Flask
+    sw_span.component = Component.General
     sw_span.tag(TagHttpMethod(method))
     sw_span.tag(TagHttpURL(path))
     if len(query_string):
@@ -618,16 +618,16 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                         pass
                     else:
                         start_response('404 OK', [])
-                    sw_span.tag(TagHttpStatusCode(404))
-                    sw_span.error_occurred = True
+                        sw_span.error_occurred = True
+                        sw_span.tag(TagHttpStatusCode(404))
                     return [b'404']
         else:
             if skip_status and 404 in skip_status:
                 pass
             else:
                 start_response('404 OK', [])
-            sw_span.tag(TagHttpStatusCode(404))
-            sw_span.error_occurred = True
+                sw_span.tag(TagHttpStatusCode(404))
+                sw_span.error_occurred = True
             return [b'404']
 
         if len(content) > 200 and environ.get("HTTP_ACCEPT_ENCODING", "").find("gzip") >= 0:
