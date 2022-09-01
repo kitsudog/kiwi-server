@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>表单设计器kcz</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="lib/k-form-design.css">
+</head>
+
+<body>
+<div id="app">
+    <k-form-design :showBtnList="[
+    'preview',
+    'importJson',
+    'exportJson',
+    'exportCode',
+    'reset',
+  ]" title="表单设计器 -自定义标题"></k-form-design>
+</div>
+<script src="lib/vue.min.js"></script>
+<script src="lib/k-form-design.umd.min.js"></script>
+<script>
+    let jsonData = {
+        list: [{
+            "type": "input",
+            "name": "单行文本",
+            "options": {"width": "100%", "defaultValue": "", "placeholder": "请输入", "disabled": false},
+            "model": "input_1574002292465",
+            "key": "input_1574002292465",
+            "rules": [{"required": false, "message": "必填项"}]
+        }],
+        "config": {
+            "layout": "horizontal",
+            "labelCol": {"span": 4},
+            "wrapperCol": {"span": 18},
+            "hideRequiredMark": false,
+            "width": "100%",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px"
+        }
+    }
+    let vm = new Vue({
+        el: '#app',
+        data: {
+            jsonData
+        },
+        methods: {
+            handleSubmit() {
+            }
+        }
+    })
+</script>
+</body>
+
+</html>
