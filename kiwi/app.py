@@ -24,7 +24,7 @@ from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
     has_sentry, json_str, init_sky_walking, has_sky_walking
-from base.utils import read_file, flatten, load_module, write_file
+from base.utils import read_file, flatten, load_module, write_file, my_ip
 from frameworks.actions import Action
 from frameworks.base import Request
 from frameworks.context import Server
@@ -375,7 +375,20 @@ class FlaskWSGIAction:
 application = FlaskWSGIAction(app.wsgi_app)
 
 
+# noinspection HttpUrlsUsage
 def startup(forever=True):
+    if proxy := os.environ.get("PROXY"):
+        import socket
+        import socks
+        if proxy.startswith("http://"):
+            host, _, port = proxy[len("http://"):].rpartition(":")
+            socks.set_default_proxy(socks.PROXY_TYPE_HTTP, host, int(port))
+            socket.socket = socks.socksocket
+        elif proxy.startswith("socks://"):
+            host, _, port = proxy[len("socks://"):].rpartition(":")
+            socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, host, int(port))
+            socket.socket = socks.socksocket
+        print(f"Proxy: {requests.get('https://ifconfig.me').text} Real: {my_ip()}")
     with Block("准备上传目录"):
         Server.upload_dir = "static/uploads"
         Server.upload_prefix = "/uploads"
