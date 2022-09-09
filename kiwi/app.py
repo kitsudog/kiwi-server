@@ -491,7 +491,8 @@ def _main(mode: Iterable[str]):
         with Block("检查所有模块injector"):
             for entry in all_entry:
                 load_module("modules.%s.injector" % entry, fail=False)
-        init_sky_walking(f"{os.environ.get('VIRTUAL_HOST', ''.join(all_entry))}@{TAG}")
+        import socket
+        init_sky_walking(f"{os.environ.get('VIRTUAL_HOST', '-'.join(all_entry))}@{TAG}@{socket.gethostname()}")
         if is_debug():
             # 调试阶段随机初始化顺序依次破除顺序依赖
             random.shuffle(all_entry)
