@@ -573,7 +573,7 @@ def get_sw_tag(tag):
 class SentryBlock:
     # noinspection PyPackageRequirements
     def __init__(self, *, op: str, name: str = None, description: str = None, sampled: bool = None, is_span=True,
-                 no_sentry=False):
+                 no_sentry=False, ignore_exception=None):
         self.sw_span = None
         if has_sky_walking():
             # 嵌入skywalking
@@ -582,7 +582,8 @@ class SentryBlock:
             human = op if name is None else f"{op}[{name}]"
             self.sw_span = get_context().new_local_span(op=human)
             self.sw_span.layer = Layer.RPCFramework
-            self.sw_span.component = Component.Flask
+            self.sw_span.component = Component.General
+            self.ignore_exception = ignore_exception
 
         self.span = None
         if not has_sentry() or no_sentry:
@@ -612,6 +613,10 @@ class SentryBlock:
             from skywalking.trace.tags import TagHttpStatusCode
             if self.span.status:
                 self.sw_span.tag(TagHttpStatusCode(self.span.status))
+            if self.ignore_exception:
+                # 忽略掉一些不用记录的异常
+                if exc_type in self.ignore_exception:
+                    return self.span.__exit__(None, None, None)
             self.sw_span.__exit__(exc_type, exc_val, exc_tb)
         return self.span.__exit__(exc_type, exc_val, exc_tb)
 

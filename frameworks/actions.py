@@ -852,7 +852,7 @@ class Action(FastAction):
         response = None
         try:
             params = {}
-            with SentryBlock(op="Injector", name=self.func_title):
+            with SentryBlock(op="Injector", name=self.func_title, ignore_exception={BusinessException}):
                 for each in self.__injector_list:
                     params[each.param] = each.from_req(request)
                     if params[each.param] is NONE:
@@ -954,7 +954,8 @@ class Action(FastAction):
         except Exception as e:
             has_err = True
             err_code = -2
-            Trace("[%s][%s] 出现错误 orig[%s]" % (request.cmd, request.session, request.params.get("#content#", "")[:1000]),
+            Trace("[%s][%s] 出现错误 orig[%s]" % (
+                request.cmd, request.session, request.params.get("#content#", "")[:1000]),
                   e)
             if not self.__class__ == Action:
                 raise e
@@ -1178,13 +1179,17 @@ class Code:
 # noinspection NonAsciiCharacters
 class FBCode(Code):
     CODE_参数不正确 = Code(1101, "invalid request [param=${param}]", "[${param}=${hint}]不存在", status_code=400)
-    CODE_UUID参数不正确 = Code(1102, "invalid request [param=${param}]", "[${param}=${hint}:${uuid}]不存在", status_code=400)
+    CODE_UUID参数不正确 = Code(1102, "invalid request [param=${param}]", "[${param}=${hint}:${uuid}]不存在",
+                               status_code=400)
     CODE_尚未登录 = Code(1103, "unauthorized", status_code=401)
     CODE_参数不是数字 = Code(1104, "invalid request [param=${param}]", "参数不是数字[${value}]", status_code=400)
     CODE_参数不是小数 = Code(1105, "invalid request [param=${param}]", "参数不是小数[${value}]", status_code=400)
-    CODE_参数不是合法布尔值 = Code(1106, "invalid request [param=${param}]", "参数不是合法布尔值[${value}]", status_code=400)
-    CODE_参数不是合法数组 = Code(1107, "invalid request [param=${param}]", "参数不是合法数组[${value}]", status_code=400)
-    CODE_参数不是合法集合 = Code(1108, "invalid request [param=${param}]", "参数不是合法集合[${value}]", status_code=400)
+    CODE_参数不是合法布尔值 = Code(1106, "invalid request [param=${param}]", "参数不是合法布尔值[${value}]",
+                                   status_code=400)
+    CODE_参数不是合法数组 = Code(1107, "invalid request [param=${param}]", "参数不是合法数组[${value}]",
+                                 status_code=400)
+    CODE_参数不是合法集合 = Code(1108, "invalid request [param=${param}]", "参数不是合法集合[${value}]",
+                                 status_code=400)
     CODE_参数不是JSON = Code(1109, "invalid request", "参数不是合法JSON[${value}]", status_code=400)
     CODE_缺少AUTH = Code(1110, "unauthorized", status_code=401)
     CODE_参数类型不对 = Code(1111, "invalid request", status_code=400)
