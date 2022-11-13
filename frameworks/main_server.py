@@ -511,6 +511,9 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                             ret.append(("Access-Control-Allow-Origin", f"http://{origin[7:].partition('/')[0]}"))
                         if ALLOW_ORIGIN and origin.lower() in ALLOW_ORIGIN:
                             ret.append(("Access-Control-Allow-Credentials", "true"))
+                        elif "http://localhost:" in origin:
+                            # 方便本地调试
+                            ret.append(("Access-Control-Allow-Credentials", "true"))
                 with Block("会话部分"):
                     if params.get("c_d-token") != (_d_token := _session.get_token()):
                         # cookie不对
