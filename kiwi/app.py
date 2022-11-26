@@ -285,7 +285,7 @@ def module_static(module, path, file):
     if mime := mimetypes.guess_type(request.path):
         rsp.headers['Content-Type'] = mime[0]
     else:
-        rsp.headers['Content-Type'] = "text/html"
+        rsp.headers['Content-Type'] = "text/"
     return rsp
 
 
@@ -301,7 +301,7 @@ def module2_static(module, module2, path, file):
     if mime := mimetypes.guess_type(request.path):
         rsp.headers['Content-Type'] = mime[0]
     else:
-        rsp.headers['Content-Type'] = "text/html"
+        rsp.headers['Content-Type'] = "text/"
     return rsp
 
 
