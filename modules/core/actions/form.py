@@ -17,6 +17,9 @@ def smart(__params):
 </head>
 
 <body>
+<div style="text-align: right;">
+    <a onclick="gotoDesign()">编辑器</a>
+</div>
 <div class="app">
     <k-form-build ref="KFB" @submit="handleSubmit" :value="jsonData"></k-form-build>
 </div>
@@ -28,8 +31,13 @@ var original=Object.keys(window);
 </script>
 <script src="%(path)s.js"></script>
 <script>
+    var jsonData = {};
+    function gotoDesign(){
+        localStorage.setItem("form::design", JSON.stringify(jsonData));
+        window.location.href="/k-form-design/index.html";
+    }
     (async () => {
-        const jsonData = (await Vue.http.get(`%(path)s.json`)).data;
+        jsonData = (await Vue.http.get(`%(path)s.json`)).data;
         const config = {
             el: '.app',
             data:{},

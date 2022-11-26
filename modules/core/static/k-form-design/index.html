@@ -9,37 +9,63 @@
 
 <body>
 <div id="app">
-    <k-form-design :showBtnList="[
-    'preview',
-    'importJson',
-    'exportJson',
-    'exportCode',
-    'reset',
-  ]" title="表单设计器 -自定义标题"></k-form-design>
+    <k-form-design ref='kfd'
+                   :showBtnList="[ 'save', 'preview', 'importJson', 'exportJson', 'exportCode', 'reset', 'close', 'undo', 'redo' ]"
+                   title="表单设计器 -自定义标题">
+    </k-form-design>
 </div>
 <script src="lib/vue.min.js"></script>
 <script src="lib/k-form-design.umd.min.js"></script>
 <script>
     let jsonData = {
-        list: [{
-            "type": "input",
-            "name": "单行文本",
-            "options": {"width": "100%", "defaultValue": "", "placeholder": "请输入", "disabled": false},
-            "model": "input_1574002292465",
-            "key": "input_1574002292465",
-            "rules": [{"required": false, "message": "必填项"}]
-        }],
+        "list": [
+            {
+                "type": "input",
+                "label": "输入框",
+                "options": {
+                    "type": "text",
+                    "width": "100%",
+                    "defaultValue": "",
+                    "placeholder": "请输入",
+                    "clearable": false,
+                    "maxLength": null,
+                    "hidden": false,
+                    "disabled": false
+                },
+                "model": "input_1603939737389",
+                "key": "input_1603939737389",
+                "rules": [
+                    {
+                        "required": false,
+                        "message": "必填项"
+                    }
+                ]
+            }
+        ],
         "config": {
             "layout": "horizontal",
-            "labelCol": {"span": 4},
-            "wrapperCol": {"span": 18},
+            "labelCol": {
+                "xs": 4,
+                "sm": 4,
+                "md": 4,
+                "lg": 4,
+                "xl": 4,
+                "xxl": 4
+            },
+            "wrapperCol": {
+                "xs": 18,
+                "sm": 18,
+                "md": 18,
+                "lg": 18,
+                "xl": 18,
+                "xxl": 18
+            },
             "hideRequiredMark": false,
-            "width": "100%",
-            "marginTop": "0px",
-            "marginRight": "0px",
-            "marginBottom": "0px",
-            "marginLeft": "0px"
+            "customStyle": ""
         }
+    }
+    if (localStorage.getItem("form::design")) {
+        jsonData = JSON.parse(localStorage.getItem("form::design"));
     }
     let vm = new Vue({
         el: '#app',
@@ -47,8 +73,14 @@
             jsonData
         },
         methods: {
+            importData() {
+                this.$refs.kfd.handleSetData(this.jsonData)
+            },
             handleSubmit() {
             }
+        },
+        mounted() {
+            this.importData()
         }
     })
 </script>
