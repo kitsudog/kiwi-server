@@ -41,6 +41,7 @@ var original=Object.keys(window);
         const config = {
             el: '.app',
             data:{},
+            methods:{},
         }
         Object.keys(window).filter(x=>original.indexOf(x)<0).forEach(x=>{
             config[x] = window[x];

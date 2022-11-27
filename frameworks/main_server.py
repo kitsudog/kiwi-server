@@ -613,6 +613,12 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                 name, _, ext = file_path.rpartition(".")
                 if ext in {"html", "htm"}:
                     headers.append(("Content-Type", "text/html; charset=utf-8"))
+                elif ext in {"json"}:
+                    headers.append(("Content-Type", "application/json; charset=utf-8"))
+                elif ext in {"js"}:
+                    headers.append(("Content-Type", "application/x-javascript; charset=utf-8"))
+                elif ext in {"css"}:
+                    headers.append(("Content-Type", "text/css; charset=utf-8"))
                 content = read_binary_file(file_path)
             else:
                 # 走模板
