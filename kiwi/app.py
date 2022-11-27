@@ -280,7 +280,9 @@ def module_static(module, path, file):
     主要是是弥补没有context_path的
     """
     from flask import make_response
-    rsp = make_response(requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content)
+    rsp = make_response(
+        requests.get(f"http://127.0.0.1:{int(os.environ.get('KIWI_PORT', 8000))}/{path}/{file}").content
+    )
     # 继承 mime
     if mime := mimetypes.guess_type(request.path):
         rsp.headers['Content-Type'] = mime[0]
@@ -296,7 +298,9 @@ def module2_static(module, module2, path, file):
     主要是是弥补没有context_path的
     """
     from flask import make_response
-    rsp = make_response(requests.get(f"http://127.0.0.1:{8000}/{path}/{file}").content)
+    rsp = make_response(
+        requests.get(f"http://127.0.0.1:{int(os.environ.get('KIWI_PORT', 8000))}/{path}/{file}").content
+    )
     # 继承 mime
     if mime := mimetypes.guess_type(request.path):
         rsp.headers['Content-Type'] = mime[0]

@@ -292,6 +292,9 @@ def reg_static_file2(static_path: str, path: str):
 
 
 def get_file_path(path: str):
+    path2 = f"/{path[1:].partition('/')[-1]}"
+    if ret := __STATIC_FILES.get(path2):
+        return ret
     return __STATIC_FILES.get(path, f"static{path}")
 
 
@@ -599,7 +602,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
             finally:
                 SessionMgr.destroy(_session)
     elif method == "GET":
-        headers = [("Access-Control-Allow-Origin", "*")]
+        headers = [("Access-Control-Allow-Origin", "*"), ("Server", "FLASK")]
         if path == "/":
             # 只允许index.html
             path = "/index.html"
