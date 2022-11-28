@@ -1,9 +1,19 @@
-data = {
-    config: {
-        a: 1
+data = function () {
+    return {
+        config: {outputString: true},
     }
 }
+
+dynamicData = function () {
+    return {
+        testSend: this.debug,
+    }
+}
+
 methods = {
+    debug() {
+        alert("dev");
+    },
     handleSubmit(p) {
         // 通过表单提交按钮触发，获取promise对象
         p().then(res => {

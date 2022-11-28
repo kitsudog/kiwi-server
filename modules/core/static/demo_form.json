@@ -133,6 +133,19 @@
           "key": "button_1656643891426"
         },
         {
+          "type": "button",
+          "label": "按钮",
+          "icon": "icon-button-remove",
+          "options": {
+            "type": "danger",
+            "handle": "dynamic",
+            "dynamicFun": "debug",
+            "hidden": false,
+            "disabled": false
+          },
+          "key": "button_1669661346322"
+        },
+        {
           "type": "divider",
           "label": "分割线",
           "icon": "icon-fengexian",

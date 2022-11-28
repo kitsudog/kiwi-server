@@ -21,7 +21,7 @@ def smart(__params):
     <a onclick="gotoDesign()">编辑器</a>
 </div>
 <div class="app" style="margin: 10px;">
-    <k-form-build ref="KFB" :config="config" @submit="handleSubmit" :value="jsonData" @change="handleChange"></k-form-build>
+    <k-form-build ref="KFB" :outputString="true" :dynamicData="dynamicData" :config="config" @submit="handleSubmit" :value="jsonData" @change="handleChange"></k-form-build>
 </div>
 <script src="js/vue.min.js"></script>
 <script src="js/vue-resource.min.js"></script>
@@ -54,10 +54,14 @@ var original=Object.keys(window);
             }
             console.info("inject", x, __config[x]);
         });
-        let tmp = (typeof window.data=="function"?window.data():window.data) || {};
         __config.data = function() {
+            let tmp = (typeof window.data==="function"?window.data.call(this):window.data) || {};
             tmp.jsonData = jsonData;
-            tmp.config = (typeof window.config=="function"?window.config():window.config) || tmp.config || {};
+            window.$kfb_dynamicData = tmp.dynamicData = (typeof window.dynamicData==="function"?window.dynamicData.call(this):window.dynamicData) || tmp.dynamicData || {};
+            Object.keys(__config.methods).filter(x=>typeof __config.methods[x]==="function").forEach(x=>{
+                window.$kfb_dynamicData[x] = __config.methods[x];
+            });
+            tmp.config = (typeof window.config==="function"?window.config():window.config) || tmp.config || {};
             return tmp;
         }
         Vue.config.productionTip = true;
@@ -65,8 +69,9 @@ var original=Object.keys(window);
         if(!__config.methods.handleSubmit){
             alert("请补齐methods::handleSubmit方法");
         } else {
-            console.log("config", __config, __config.data());
-            new Vue(__config);
+            window.app = new Vue(__config);
+            console.info("config", __config);
+            console.info("data", window.app.$data);
         }
     })();
 </script>
