@@ -21,7 +21,7 @@ def smart(__params):
     <a onclick="gotoDesign()">编辑器</a>
 </div>
 <div class="app" style="margin: 10px;">
-    <k-form-build ref="KFB" @submit="handleSubmit" :value="jsonData" @change="handleChange"></k-form-build>
+    <k-form-build ref="KFB" :config="config" @submit="handleSubmit" :value="jsonData" @change="handleChange"></k-form-build>
 </div>
 <script src="js/vue.min.js"></script>
 <script src="js/vue-resource.min.js"></script>
@@ -38,30 +38,35 @@ var original=Object.keys(window);
     }
     (async () => {
         jsonData = (await Vue.http.get(`%(path)s.json`)).data;
-        const config = {
+        const __config = {
             el: '.app',
-            data: {
-                
-            },
             methods: {
                 handleChange: console.log,
             },
         }
         Object.keys(window).filter(x => original.indexOf(x) < 0).forEach(x => {
-            if(typeof window[x] == "object" && config[x]){
+            if(typeof window[x] == "object" && __config[x]){
                 Object.keys(window[x]).forEach(key => {
-                    config[x][key] = window[x][key];
+                    __config[x][key] = window[x][key];
                 })
             } else {
-                config[x] = window[x];
+                __config[x] = window[x];
             }
-            console.info("inject", x, config[x]);
+            console.info("inject", x, __config[x]);
         });
-        config.data.jsonData = jsonData;
-        if(!config.methods.handleSubmit){
+        let tmp = (typeof window.data=="function"?window.data():window.data) || {};
+        __config.data = function() {
+            tmp.jsonData = jsonData;
+            tmp.config = (typeof window.config=="function"?window.config():window.config) || tmp.config || {};
+            return tmp;
+        }
+        Vue.config.productionTip = true;
+        Vue.config.devtools=true;
+        if(!__config.methods.handleSubmit){
             alert("请补齐methods::handleSubmit方法");
         } else {
-            new Vue(config);
+            console.log("config", __config, __config.data());
+            new Vue(__config);
         }
     })();
 </script>

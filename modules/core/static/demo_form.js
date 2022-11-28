@@ -1,3 +1,8 @@
+data = {
+    config: {
+        a: 1
+    }
+}
 methods = {
     handleSubmit(p) {
         // 通过表单提交按钮触发，获取promise对象
