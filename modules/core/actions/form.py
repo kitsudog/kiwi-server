@@ -20,8 +20,8 @@ def smart(__params):
 <div style="text-align: right;">
     <a onclick="gotoDesign()">编辑器</a>
 </div>
-<div class="app">
-    <k-form-build ref="KFB" @submit="handleSubmit" :value="jsonData"></k-form-build>
+<div class="app" style="margin: 10px;">
+    <k-form-build ref="KFB" @submit="handleSubmit" :value="jsonData" @change="handleChange"></k-form-build>
 </div>
 <script src="js/vue.min.js"></script>
 <script src="js/vue-resource.min.js"></script>
@@ -40,11 +40,21 @@ var original=Object.keys(window);
         jsonData = (await Vue.http.get(`%(path)s.json`)).data;
         const config = {
             el: '.app',
-            data:{},
-            methods:{},
+            data: {
+                
+            },
+            methods: {
+                handleChange: console.log,
+            },
         }
-        Object.keys(window).filter(x=>original.indexOf(x)<0).forEach(x=>{
-            config[x] = window[x];
+        Object.keys(window).filter(x => original.indexOf(x) < 0).forEach(x => {
+            if(typeof window[x] == "object" && config[x]){
+                Object.keys(window[x]).forEach(key => {
+                    config[x][key] = window[x][key];
+                })
+            } else {
+                config[x] = window[x];
+            }
             console.info("inject", x, config[x]);
         });
         config.data.jsonData = jsonData;
