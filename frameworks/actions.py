@@ -647,7 +647,7 @@ class Action(FastAction):
             try:
                 return base64decode(value)
             except Exception:
-                raise BusinessException(401, f"参数[{self.alias}]不是合法的base64字符串")
+                raise BusinessException(400, f"参数[{self.alias}]不是合法的base64字符串", status_code=400)
 
     class PatternInjector(StrInjector):
 
@@ -1005,6 +1005,7 @@ class ChunkAction(Action):
             self.prepared = True
 
 
+# noinspection PyPep8Naming
 def BAssert(expr: T, msg: str = "出现错误", *, internal_msg: Optional[str] = None, code=500, log=True) -> T:
     if not bool(expr):
         if log:
@@ -1168,7 +1169,7 @@ class Code:
                     internal_msg = self.gen_msg_func(self.internal_msg, kwargs)
                 if log:
                     Log(f"业务失败[{internal_msg}]")
-                raise BusinessException(self.code, msg, internal_msg=internal_msg)
+                raise BusinessException(self.code, msg, internal_msg=internal_msg, status_code=self.status_code)
             else:
                 if log:
                     Log(f"业务失败[{self.internal_msg}]")

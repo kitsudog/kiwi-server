@@ -416,13 +416,16 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                                 (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
                                         ):
                                             if header[:3] == codecs.BOM_UTF8:
-                                                _params_tmp[v].append(raw_bytes.decode("utf-8-sig"))
+                                                string = raw_bytes.decode("utf-8-sig")
                                             elif header[:2] == codecs.BOM_UTF16_LE:
-                                                _params_tmp[v].append(raw_bytes[2:].decode("utf-16-le"))
+                                                string = raw_bytes[2:].decode("utf-16-le")
                                             elif header[:2] == codecs.BOM_UTF16_BE:
-                                                _params_tmp[v].append(raw_bytes[2:].decode("utf-16-be"))
+                                                string = raw_bytes[2:].decode("utf-16-be")
+                                            else:
+                                                raise Never()
                                         else:
-                                            _params_tmp[v].append(raw_bytes.decode("utf-8"))
+                                            string = raw_bytes.decode("utf-8")
+                                        _params_tmp[v].append(string.encode("utf-8"))
                                     else:
                                         _params_tmp[v].append(ActionBytes(raw_bytes))
 
