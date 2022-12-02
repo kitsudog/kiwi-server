@@ -86,10 +86,7 @@ class ActionBytes(bytes):
             return bytes.__repr__(self)
 
     def __str__(self):
-        if len(self) > 30:
-            return bytes.__str__(self[:30]) + "..."
-        else:
-            return bytes.__str__(self)
+        return self.decode("utf-8")
 
 
 # noinspection PyMethodMayBeStatic
@@ -262,6 +259,12 @@ class Action(FastAction):
         def verify_value(self, value):
             if not isinstance(value, str):
                 raise Fail(f"[{value=}]不能转换为str")
+
+        # def from_value(self, value):
+        #     if isinstance(value, ActionBytes):
+        #         return value.decode("utf-8")
+        #     else:
+        #         return self.from_str_value(str(value))
 
         def from_str_value(self, value: str):
             return value

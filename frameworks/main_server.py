@@ -425,7 +425,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                                 raise Never()
                                         else:
                                             string = raw_bytes.decode("utf-8")
-                                        _params_tmp[v].append(string.encode("utf-8"))
+                                        _params_tmp[v].append(ActionBytes(string.encode("utf-8")))
                                     else:
                                         _params_tmp[v].append(ActionBytes(raw_bytes))
 
