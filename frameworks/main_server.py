@@ -1,3 +1,4 @@
+import codecs
 # noinspection PySetFunctionToLiteral
 import os
 import re
@@ -410,7 +411,18 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                     if content_type1 == "text" or content_type in {
                                         "application/javascript", "image/svg+xml",
                                     }:
-                                        _params_tmp[v].append(raw_bytes.decode("utf-8"))
+                                        header = raw_bytes[:4]
+                                        if header.startswith(
+                                                (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
+                                        ):
+                                            if header[:3] is codecs.BOM_UTF8:
+                                                _params_tmp[v].append(raw_bytes.decode("utf-8-sig"))
+                                            elif header[:2] is codecs.BOM_UTF16_LE:
+                                                _params_tmp[v].append(raw_bytes[2:].decode("utf-16-le"))
+                                            elif header[:2] is codecs.BOM_UTF16_BE:
+                                                _params_tmp[v].append(raw_bytes[2:].decode("utf-16-be"))
+                                        else:
+                                            _params_tmp[v].append(raw_bytes.decode("utf-8"))
                                     else:
                                         _params_tmp[v].append(ActionBytes(raw_bytes))
 
