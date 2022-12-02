@@ -415,11 +415,11 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                         if header.startswith(
                                                 (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
                                         ):
-                                            if header[:3] is codecs.BOM_UTF8:
+                                            if header[:3] == codecs.BOM_UTF8:
                                                 _params_tmp[v].append(raw_bytes.decode("utf-8-sig"))
-                                            elif header[:2] is codecs.BOM_UTF16_LE:
+                                            elif header[:2] == codecs.BOM_UTF16_LE:
                                                 _params_tmp[v].append(raw_bytes[2:].decode("utf-16-le"))
-                                            elif header[:2] is codecs.BOM_UTF16_BE:
+                                            elif header[:2] == codecs.BOM_UTF16_BE:
                                                 _params_tmp[v].append(raw_bytes[2:].decode("utf-16-be"))
                                         else:
                                             _params_tmp[v].append(raw_bytes.decode("utf-8"))
