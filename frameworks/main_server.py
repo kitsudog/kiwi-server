@@ -382,8 +382,11 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     Log("未知的提交类型[%s]" % content_type)
             if isinstance(content, bytes):
                 # 提交的是文件数据
-                if content_type.startswith("multipart/form-data; boundary="):
-                    boundary = content_type[len("multipart/form-data; boundary="):].encode("utf-8")
+                if content_type.startswith("multipart/form-data; boundary=") or content_type.startswith(
+                        "multipart/form-data; charset=UTF-8; boundary="):
+                    a, b, c = content_type.partition("boundary=")
+                    assert a.startswith("multipart/form-data;")
+                    boundary = c.encode("utf-8")
                     _sign = b"--%s" % boundary
                     content_list = content.split(_sign + b"\r\n")[1:]  # type: List[bytes]
                     _sign = _sign + b"--\r\n"
