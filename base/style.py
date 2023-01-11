@@ -532,6 +532,12 @@ class NoThing:
     def __str__(self):
         return "#NOTHING#"
 
+    def __bool__(self):
+        return False
+
+    def __int__(self):
+        raise Exception("fail cast to int")
+
 
 NoThing.__NONE = NoThing()
 

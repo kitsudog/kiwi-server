@@ -490,7 +490,7 @@ class Action(FastAction):
             FBCode.CODE_参数格式不对(isinstance(self.default_value, set), param_func=lambda: {
                 "param": self.alias,
                 "error": "必须指定`set`",
-            })
+            }, log=False)
             self.value_set = set(self.default_value)
             for each in self.value_set:
                 FBCode.CODE_参数格式不对(isinstance(each, str) or isinstance(each, int), param_func=lambda: {
@@ -1026,6 +1026,8 @@ class Code:
 
     }
 
+    default_log = True
+
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         prefix = "CODE_"
@@ -1137,7 +1139,7 @@ class Code:
             params[k] = v
 
     def __call__(self, expr: T, *, param_str: str = None, param: Dict = None, param_func: Callable[[], Dict] = None,
-                 exception: Exception = None, log=True, **kwargs) -> T:
+                 exception: Exception = None, log=None, **kwargs) -> T:
         if is_debug():
             if self.need_param:
                 # todo: 源码级别的检查必须用字面量
@@ -1170,11 +1172,15 @@ class Code:
                 else:
                     msg = self.gen_msg_func(self.msg, kwargs)
                     internal_msg = self.gen_msg_func(self.internal_msg, kwargs)
-                if log:
+                if log is False:
+                    pass
+                elif log or Code.default_log:
                     Log(f"业务失败[{internal_msg}]")
                 raise BusinessException(self.code, msg, internal_msg=internal_msg, status_code=self.status_code)
             else:
-                if log:
+                if log is False:
+                    pass
+                elif log or Code.default_log:
                     Log(f"业务失败[{self.internal_msg}]")
                 raise self.error
         return expr

@@ -24,6 +24,10 @@ pool_map = {
 }
 
 
+def is_no_redis():
+    return os.environ.get("NO_REDIS") == "TRUE"
+
+
 # todo: 支持定制
 # noinspection PyBroadException
 def db_redis(index) -> Redis:

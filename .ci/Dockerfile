@@ -1,4 +1,5 @@
-FROM python:3.8
+ARG  PY_VERSION=3.8
+FROM --platform=linux/amd64 python:${PY_VERSION}
 RUN apt update && apt -y install libldap2-dev libsasl2-dev && apt clean
 WORKDIR /app/server
 COPY requirements.txt /app/kiwi/requirements.txt
@@ -7,6 +8,7 @@ RUN sh -c "cd /app/kiwi;pip install --no-cache-dir --disable-pip-version-check -
 COPY . /app/kiwi
 RUN cd /app/kiwi && echo "__version__ = '0.0.0'" > _version.py && python setup.py install && rm -fr /app/kiwi
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 CMD curl -f http://localhost:8000/ || exit 1
 ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app/server \
     PYTHON_PRETTY_ERRORS_ISATTY_ONLY=1 \

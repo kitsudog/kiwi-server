@@ -6,7 +6,7 @@ from base.interface import IMinService
 from base.style import Fail, Log, Assert, str_json, json_str, now, has_sky_walking
 from frameworks.actions import FastAction, GetAction
 from frameworks.base import Response, Request, ServerError
-from frameworks.redis_mongo import db_config
+from frameworks.redis_mongo import db_config, is_no_redis
 from frameworks.server_context import RouterContext
 
 
@@ -58,7 +58,11 @@ class ExGetHandlerConfig(TypedDict):
 class Router(IMinService):
 
     def update_remote_module(self):
-        # 加载远端的接口
+        """
+        加载远端的接口
+        """
+        if is_no_redis():
+            return
         for module, config in db_config.hgetall("module").items():
             config = str_json(config)
             Assert(isinstance(config["cmd"], list))

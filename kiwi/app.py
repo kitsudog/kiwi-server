@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from frameworks.redis_mongo import is_no_redis
+
 if __name__ == "__main__":
     from gevent import monkey
 
@@ -565,7 +567,8 @@ def test():
         action_sample.test()
         if not MYSQL_SUPPORT:
             db_sample.test()
-        node_sample.test()
+        if not is_no_redis():
+            node_sample.test()
 
 
 if __name__ == '__main__':
