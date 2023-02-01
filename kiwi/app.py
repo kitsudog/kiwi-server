@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-from frameworks.redis_mongo import is_no_redis
-
 if __name__ == "__main__":
     from gevent import monkey
 
@@ -13,7 +11,6 @@ import os
 import random
 from datetime import datetime
 from time import sleep
-from typing import Iterable, Dict, TypedDict, List, Optional
 
 import click
 import flask_migrate
@@ -23,6 +20,7 @@ from flask import Flask, request, Response
 from flask_cors import CORS
 from flask_migrate import Migrate
 from skywalking.trace.span import NoopSpan
+from typing import Iterable, Dict, TypedDict, List, Optional
 
 from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
     has_sentry, json_str, init_sky_walking, has_sky_walking
@@ -563,6 +561,7 @@ def test():
         from frameworks import action_sample
         from frameworks import db_sample
         from frameworks import node_sample
+        from frameworks.redis_mongo import is_no_redis
 
         action_sample.test()
         if not MYSQL_SUPPORT:
