@@ -496,7 +496,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                 ret.append(("Access-Control-Allow-Credentials", "true"))
         ret.append(("Access-Control-Allow-Methods", "GET, POST, OPTIONS"))
         ret.append(("Access-Control-Allow-Headers", OPTIONS_HEADERS_STR))
-        ret.append(("Access-Control-Max-Age", 600))
+        ret.append(("Access-Control-Max-Age", "3600"))
         start_response('200 OK', ret)
         sw_span.tag(TagHttpStatusCode(200))
         return [b""]
