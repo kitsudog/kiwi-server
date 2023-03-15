@@ -182,6 +182,7 @@ if has_sentry():
 app = Flask(__name__, root_path=os.path.curdir)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.debug = is_dev()
+app.url_map.strict_slashes = False
 if config:
     app.config.from_object(config)
     db.init_app(app)
