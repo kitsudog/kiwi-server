@@ -11,24 +11,19 @@ import os
 import random
 from datetime import datetime
 from time import sleep
+from typing import Iterable, Dict, TypedDict, List, Optional
 
 import click
 import flask_migrate
-import gevent
 import requests
 from flask import Flask, request, Response
 from flask_cors import CORS
 from flask_migrate import Migrate
 from skywalking.trace.span import NoopSpan
-from typing import Iterable, Dict, TypedDict, List, Optional
 
-from base.style import Block, Log, is_debug, active_console, inactive_console, Trace, is_dev, now, Assert, Error, \
+from base.style import Block, Log, is_debug, active_console, Trace, is_dev, Assert, Error, \
     has_sentry, json_str, init_sky_walking, has_sky_walking
-from base.utils import read_file, flatten, load_module, write_file, my_ip
-from frameworks.actions import Action
-from frameworks.base import Request
-from frameworks.context import Server
-from frameworks.main_server import wsgi_handler, tick_cycle, service_cycle, reg_static_file, reg_static_file2
+from base.utils import read_file, flatten, load_module, write_file
 from frameworks.sql_model import db
 
 # pretty_errors.configure(
@@ -355,6 +350,7 @@ class FlaskWSGIAction:
 
     # noinspection PyListCreation
     def __call__(self, environ, start_response):
+        from frameworks.main_server import wsgi_handler
         if has_sky_walking():
             from skywalking.trace.context import get_context
             from skywalking.trace.carrier import Carrier
@@ -381,57 +377,6 @@ application = FlaskWSGIAction(app.wsgi_app)
 
 
 # noinspection HttpUrlsUsage
-def startup(forever=True):
-    if proxy := os.environ.get("PROXY"):
-        import socket
-        import socks
-        if proxy.startswith("http://"):
-            host, _, port = proxy[len("http://"):].rpartition(":")
-            socks.set_default_proxy(socks.PROXY_TYPE_HTTP, host, int(port))
-            socket.socket = socks.socksocket
-        elif proxy.startswith("socks://"):
-            host, _, port = proxy[len("socks://"):].rpartition(":")
-            socks.set_default_proxy(socks.PROXY_TYPE_SOCKS5, host, int(port))
-            socket.socket = socks.socksocket
-        print(f"Proxy: {requests.get('https://ifconfig.me').text} Real: {my_ip()}")
-    with Block("准备上传目录"):
-        Server.upload_dir = "static/uploads"
-        Server.upload_prefix = "/uploads"
-        os.makedirs("static/uploads", exist_ok=True)
-
-    def ip_injector(_request: Request):
-        return _request.session.get_ip()
-
-    Action.reg_param_injector("__ip", ip_injector)
-
-    app.wsgi_app = application
-
-    def gevent_tick_cycle():
-        while True:
-            expire = now() + 10
-            tick_cycle()
-            gevent.sleep(max(0.001, (expire - now())) / 1000)
-
-    def gevent_service_cycle():
-        while True:
-            expire = now() + 100
-            service_cycle()
-            gevent.sleep(max(0.001, (expire - now())) / 1000)
-
-    gevent.spawn(gevent_tick_cycle)
-    gevent.spawn(gevent_service_cycle)
-    if forever:
-        Log("Server Ready ...")
-        if not is_dev() and not is_debug():
-            inactive_console()
-        if is_dev():
-            app.run(host="0.0.0.0", port=int(os.environ.get("KIWI_PORT", 8000)), debug=True)
-        else:
-            from gevent import pywsgi
-            pywsgi.WSGIServer(('', int(os.environ.get("KIWI_PORT", 8000))), application=app, log=None).serve_forever()
-    else:
-        # for wsgi
-        print("wait for wsgi")
 
 
 # https://click.palletsprojects.com/en/7.x/options/
@@ -446,7 +391,8 @@ def main(**kwargs):
         global TAG
         TAG = kwargs["tag"]
     _main(kwargs["mode"])
-    startup()
+    from kiwi.main import startup
+    startup(app, application)
 
 
 def _main(mode: Iterable[str]):
@@ -485,6 +431,7 @@ def _main(mode: Iterable[str]):
                     for k, v in each["source"].items():
                         os.environ[k.upper().replace(".", "_")] = v
     with Block("启动服务器"):
+        from frameworks.main_server import reg_static_file, reg_static_file2
         if not os.path.exists("conf/module.conf"):
             os.makedirs("conf", exist_ok=True)
             write_file("conf/module.conf", json_str({
@@ -577,4 +524,6 @@ if __name__ == '__main__':
     main()
 elif __name__ == 'app':
     _main(mode=["full"])
-    startup(forever=False)
+    from kiwi.main import startup
+
+    startup(app, application, forever=False)
