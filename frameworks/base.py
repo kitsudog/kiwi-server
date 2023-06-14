@@ -204,6 +204,7 @@ class ChunkStream:
     OVER = bytes()
 
     def __init__(self, request: 'Request', forward: 'ChunkStream' = None):
+        self.__last_char = None
         self.request = request
         self.func = None
         self.params = None
@@ -217,13 +218,21 @@ class ChunkStream:
     def __iter__(self):
         if not self.__start:
             def func():
+                tmp = ChunkStream.OVER
                 try:
-                    self.func(**self.params)
+                    tmp = self.func(**self.params)
                 except Exception as e:
                     Trace("chunk流工作失败", e)
                 finally:
-                    self.__end = True
+                    if tmp is not ChunkStream.OVER:
+                        if self.__last_char != b'\n':
+                            self.__buffer.put(b"\n")
+                        if isinstance(tmp, str):
+                            self.__buffer.put(str(tmp).encode("utf-8"))
+                        else:
+                            self.__buffer.put(repr(tmp).encode("utf-8"))
                     self.__buffer.put(ChunkStream.OVER)
+                    self.__end = True
 
             self.__start = gevent.spawn(func)
         while not self.__end:
@@ -239,12 +248,15 @@ class ChunkStream:
         self.__timeout = value
 
     def write(self, data: bytes, timeout=30):
-        self.__buffer.put(data)
+        if data:
+            self.__buffer.put(data)
+            self.__last_char = data[-1]
         gevent.sleep(0)
         self.__timeout = timeout
 
     def Log(self, msg: str):
         self.__buffer.put((msg + "\n").encode("utf8"))
+        self.__last_char = b'\n'
         gevent.sleep(0)
 
 

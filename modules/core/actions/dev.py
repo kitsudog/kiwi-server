@@ -375,6 +375,7 @@ def chunk3(__stream: ChunkStream, num: int, sleep=1, error=True, is_html=True):
         __stream.Log(f"line[{_}]")
     if error:
         raise Fail("test")
+    return "over"
 
 
 @GetAction
