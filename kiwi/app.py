@@ -22,7 +22,7 @@ from flask_migrate import Migrate
 from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, Trace, is_dev, Assert, Error, \
-    has_sentry, json_str, init_sky_walking, has_sky_walking
+    has_sentry, json_str, init_sky_walking, has_sky_walking, str_json, str_json_ex
 from base.utils import read_file, flatten, load_module, write_file
 from frameworks.sql_model import db
 
@@ -192,7 +192,7 @@ def get_params():
     if request.method == "OPTIONS":
         return
     if request.content_type and "json" in request.content_type:
-        request.params = json.loads(request.get_data(as_text=True))
+        request.params = str_json_ex(request.get_data(as_text=True), default_json={}, fail=False)
     elif request.form:
         print(f"params warning[{request.path}]")
         params = {}
