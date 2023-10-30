@@ -22,7 +22,7 @@ from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_pr
     profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock, has_sky_walking
 from base.utils import read_binary_file, read_file, md5bytes, write_file, my_ip
 from base.valid import ExprIP
-from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes
+from .actions import FastAction, GetAction, BusinessException, Action, FBCode, ActionBytes, ActionStr
 from .base import Request, IPacket, TextResponse, Response, ChunkPacket, ChunkStream
 from .context import DefaultRouter, Server
 from .models import BaseNode, BaseSaveModel
@@ -428,7 +428,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                                                 raise Never()
                                         else:
                                             string = raw_bytes.decode("utf-8")
-                                        _params_tmp[v].append(ActionBytes(string.encode("utf-8")))
+                                        _params_tmp[v].append(ActionStr(string))
                                     else:
                                         _params_tmp[v].append(ActionBytes(raw_bytes))
 

@@ -89,6 +89,14 @@ class ActionBytes(bytes):
         return self.decode("utf-8")
 
 
+class ActionStr(str):
+    def __repr__(self):
+        if len(self) > 30:
+            return bytes.__repr__(self[:30]) + "..."
+        else:
+            return bytes.__repr__(self)
+
+
 # noinspection PyMethodMayBeStatic
 class Action(FastAction):
     class Injector:
