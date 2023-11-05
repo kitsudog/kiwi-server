@@ -1,11 +1,12 @@
 import re
 import time
 from collections import ChainMap
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Iterator, Iterable
 
 import requests
 
-from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header
+from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header, now, date_str, \
+    str_date
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import ChunkPacket, ChunkStream, RedirectResponse
 from frameworks.context import DefaultRouter
@@ -14,12 +15,21 @@ from frameworks.redis_mongo import db_other, db_config
 from frameworks.server_context import SessionContext
 from frameworks.session import SessionMgr
 from modules.core.injector import JWTPayload
-from modules.core.utils import markdown_html
+from modules.core.utils import markdown_table_html
 
 
 # noinspection PyStringFormat
-def td_format(header, value):
-    if isinstance(value, dict):
+def td_format(header, value, *, is_tag: bool):
+    if is_tag:
+        if not isinstance(value, Iterable):
+            value = str(value)
+        if isinstance(value, str):
+            if value:
+                value = value.split(",")
+            else:
+                value = []
+        return "".join(map(lambda x: f"<div class=tag>{x}</div>", value))
+    elif isinstance(value, dict):
         return f"<div name=json1>{json_str(value)}</div>"
     else:
         return f"%-{len(header)}s" % value
@@ -28,22 +38,77 @@ def td_format(header, value):
 # noinspection PyDefaultArgument
 @GetAction
 def table_show(
-        header: List[str] = ["header-1", "header-2", "header-3", "header-4"],
-        table: List[Dict] = [
-            {"header-1": 1, "header-2": 2, "header-3": 3, "header-4": 4},
-            {"header-1": 5, "header-3": 12, "header-4": 8},
-        ],
-        row: List = [
-            ["c11", "c12", "c13", "c14"],
-            ["c21", "c22", "c23", "c24"],
-            ["c31", "c32", {"a": 1, "b": 2, "c": 3, "d": 4}],
-            [{"a": 1, "b": 2, "c": 3, "d": 4}, 2],
-        ],
-        alignment_center: Set[str] = {"header-2"},
-        alignment_right: Set[str] = {"header-3"},
-        default={"header-1": "a", "header-2": "b", "header-3": "c", "header-4": "d"},
+        header: List[str] = None,
+        table: List[Dict] = None,
+        row: List[Dict] = None,
+        show_id: bool = True,
+        alignment_center: Set[str] = None,
+        alignment_right: Set[str] = None,
+        tag_header: Set[str] = None,
+        number_header: Set[str] = None,
+        date_header: Set[str] = None,
+        default: Dict = None,
         css="",
 ):
+    if not header and table:
+        header = set()
+        for each in table:
+            header = header ^ set(each.keys())
+        header = sorted(list(header))
+    if is_debug():
+        header = ["header-1", "header-2", "header-3", "header-4", "date"] if header is None else header
+        table = [
+            {"header-1": 1, "header-2": 2, "header-3": 3, "header-4": 4},
+            {"header-1": 5, "header-3": 12, "header-4": 8},
+        ] if table is None else table
+        row = [
+            ["c11", "c12", "c13", "c14", now() - 24 * 3600 * 1000],
+            ["c21", "c22", "c23", "c24", now() + 24 * 3600 * 1000],
+            ["c31", "c32", {"a": 1, "b": 2, "c": 3, "d": 4}],
+            [{"a": 1, "b": 2, "c": 3, "d": 4}, 2],
+        ] if row is None else row
+        alignment_center = {"header-2"} if alignment_center is None else alignment_center
+        alignment_right = {"header-3"} if alignment_right is None else alignment_right
+        default = {
+            "header-1": "DEFAULT[a]", "header-2": "DEFAULT[b]",
+            "header-3": "DEFAULT[c]", "header-4": "DEFAULT[d]",
+        } if default is None else default
+        tag_header = {"header-3"} if tag_header is None else tag_header
+        date_header = {"date"} if date_header is None else date_header
+    header = header or []
+    table: List[Dict] = table or []
+    row = row or []
+    alignment_center = alignment_center or set()
+    alignment_right = alignment_right or set()
+    default = default or {}
+    tag_header = tag_header or set()
+    number_header = number_header or set()
+    date_header = date_header or set()
+
+    if row:
+        for each in row:
+            table.append(dict(ChainMap(dict(zip(header, each)), default)))
+    for each in table:
+        for h in header:
+            if h not in each:
+                each[h] = default.get(h)
+    if show_id:
+        header = ["no"] + header
+        for i, each in enumerate(table, start=1):
+            each["no"] = i
+        alignment_right.add("no")
+    for h in header:
+        if len(list(filter(lambda x: type(x) not in {int, float}, map(lambda x: x[h], table)))) == 0:
+            number_header.add(h)
+        if h in date_header:
+            for each in table:
+                if not each.get(h):
+                    each[h] = "1970-1-1 00:00:00"
+                if isinstance(each[h], int):
+                    each[h] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(each[h] / 1000))
+                elif isinstance(each[h], float):
+                    each[h] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(each[h]))
+    number_header -= date_header
     markdown = [f"|{'|'.join(header)}|"]
     tmp = []
     for h in header:
@@ -58,15 +123,13 @@ def table_show(
     for each in table:
         tmp = []
         for h in header:
-            tmp.append(td_format(h, each.get(h, default.get(h))))
+            tmp.append(td_format(h, each.get(h, default.get(h)), is_tag=h in tag_header))
         markdown.append("|%s|" % "|".join(tmp))
-    for each in row:
-        tmp = []
-        for i, h in enumerate(header):
-            tmp.append(td_format(h, default.get(header[i]) if i >= len(each) else each[i]))
-        markdown.append("|%s|" % "|".join(tmp))
-
-    return markdown_html("\n".join(markdown), css)
+    return markdown_table_html(
+        "\n".join(markdown), css, table=table, header=header,
+        alignment_center=list(alignment_center), alignment_right=list(alignment_right),
+        tag_header=list(tag_header), number_header=list(number_header), date_header=list(date_header),
+    )
 
 
 @GetAction
@@ -141,7 +204,7 @@ curl {__raw['wsgi.url_scheme']}://{__raw['HTTP_HOST']}/{api.replace('.', '/')} -
                     f"|<div name=json2>{json_str(rsp)}</div>" \
                     f"|\n"
 
-    return markdown_html(markdown, """
+    return markdown_table_html(markdown, """
 #请求 {
     min-width: 300px;
 }
@@ -291,7 +354,7 @@ def api_list(module="*"):
             markdown += "\n"
             for each in tmp:
                 markdown += f"[{each['api']}]: api_log?api={each['api']}" + "\n"
-    return markdown_html(markdown, """
+    return markdown_table_html(markdown, """
 #模块 {
     width: 50px;
 }

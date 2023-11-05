@@ -1,7 +1,15 @@
+import json
+from typing import Dict, List
+
 from frameworks.base import HTMLPacket
 
 
-def markdown_html(markdown: str, css: str) -> HTMLPacket:
+# noinspection PyDefaultArgument
+def markdown_table_html(
+        markdown: str, css: str, table: List[Dict] = [], header: List[str] = [],
+        alignment_center=[], alignment_right=[], tag_header=[],
+        number_header=[], date_header=[],
+) -> HTMLPacket:
     return HTMLPacket(f"""\
 <!doctype html>
 <html>
@@ -21,6 +29,11 @@ def markdown_html(markdown: str, css: str) -> HTMLPacket:
     <script src="js/jquery-3.3.1.min.js"></script>
     <script src="js/jquery.tablesort.min.js"></script>
     <script src="js/jquery.json-viewer.js"></script>
+    <script src="js/luxon.min.js"></script>
+    <script type="text/javascript" src="js/tabulator.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <link href="css/jquery.dataTables.min.css" type="text/css" rel="stylesheet">
+    <link href="css/tabulator.min.css" type="text/css" rel="stylesheet">
     <link href="css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
     <script>
         var content = document.getElementById('content');
@@ -63,6 +76,16 @@ def markdown_html(markdown: str, css: str) -> HTMLPacket:
                 emoji: true,
             }});
             content.innerHTML = converter.makeHtml(markdown);
+            $("em").each((i,x)=>{{$(x).replaceWith("_" + $(x).text() + "_")}});
+            var raw_table={json.dumps(table)};
+            var header={json.dumps(header)};
+            function dict(keys,values){{
+                return Array.from(keys).reduce((accumulator, key, index) => {{
+                  accumulator[key] = values[index];
+                  return accumulator;
+                }}, {{}})
+            }}
+            var table=Array.from($("tr").slice(1).map((_,x)=>dict($("th").map((_,x)=>$(x).text()),$(x).find("td").map((_,y)=>$(y).html()))));
             $("[name=json1]").css("text-align","left").each((i, each)=>{{
                 $(each).jsonViewer(JSON.parse(each.innerText), {{
                   collapsed: true,
@@ -83,7 +106,65 @@ def markdown_html(markdown: str, css: str) -> HTMLPacket:
                     console.log(e);
                 }}
             }});
-            $("em").each((i,x)=>{{$(x).replaceWith("_" + $(x).text() + "_")}});
+            let adv = location.search.slice(1).split("&").filter(x=>x.indexOf("adv=")>=0);
+            if(adv.length==0){{
+                adv = "datatables";
+            }}else{{
+                adv = adv[0].split("=")[1];    
+            }}
+            if(adv=="datatables"){{
+                new DataTable('table',{{
+                    stateSave: true,
+                }});
+            }}
+            if(adv=="tabulator"){{
+                var alignment_center = {json.dumps(alignment_center)};
+                var alignment_right = {json.dumps(alignment_right)};
+                var tag_header = {json.dumps(tag_header)};
+                var number_header = {json.dumps(number_header)};
+                var date_header = {json.dumps(date_header)};
+                var align = (x) => alignment_center.indexOf(x) >= 0 ? 'center' : (alignment_right.indexOf(x) >= 0 ? 'right' : 'left');
+                var tabulator = new Tabulator("#content", {{
+                    data: table,
+                    layout: "fitDataTable",
+                    autoColumns: true, 
+                    persistence: {{
+                      sort:true,
+                      filter:true,
+                      columns:true,
+                    }},
+                    movableColumns: true,
+                    autoColumnsDefinitions: header.map(x=>Object({{
+                        field: x, title: x, 
+                        headerFilterParams: {{valuesLookup: tag_header.indexOf(x) >= 0, clearable: true}},
+                        variableHeight: true,
+                        vertAlign: 'middle',
+                        headerHozAlign: align(x),
+                        hozAlign: align(x),
+                        formatter: number_header.indexOf(x) >= 0 ? 'plaintext' : (date_header.indexOf(x) >= 0 ? 'datetime' : 'html'),
+                        formatterParams: {{
+                            outputFormat: "yyyy/MM/dd HH:mm:ss",
+                            timezone: "Asia/Shanghai",
+                        }},
+                        sorter: number_header.indexOf(x) >= 0 ? 'number' : (date_header.indexOf(x) >= 0 ? 'datetime' : 'string'),
+                        sorterParams: {{
+                            format: "yyyy-MM-dd HH:mm:ss",
+                        }},
+                        headerFilter: true,
+                    }})),
+                }});
+                tabulator.on("tableBuilt", ()=>{{
+                    $("[name=json1]").css("text-align", "left").each((i, each)=>{{
+                        $(each).jsonViewer(JSON.parse(each.innerText), {{
+                          collapsed: true,
+                          rootCollapsable: true,
+                          withQuotes: true,
+                          withLinks: false,
+                        }});
+                        $(each).parent().css("height", "");
+                    }});
+                }});
+            }}
         }}
     </script>
 
@@ -117,6 +198,14 @@ table tr:nth-child(even)
 .comment
 {{
     font-size: small;
+}}
+.tag {{
+    padding: 4px 4px 4px 4px;
+    border: 1px solid #EEEEEE;
+    border-radius: 5px;
+    margin-right: 5px;
+    display: inline;
+    line-height: 40px;
 }}
 .tooltip {{
     position: relative;
