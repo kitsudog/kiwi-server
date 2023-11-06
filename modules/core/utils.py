@@ -117,19 +117,8 @@ def markdown_table_html(
                 adv = adv[0].split("=")[1];    
             }}
             if(adv=="datatables"){{
-                $("thead tr").prepend("<th>no</th>");
-                $("tbody tr").prepend("<td></td>");
-                $("tfoot tr").prepend("<th>no</th>");
                 var dataTable = $('table').DataTable({{
                     stateSave: true,
-                    columnDefs: [
-                        {{
-                            searchable: false,
-                            orderable: true,
-                            targets: 0,
-                        }}
-                    ],
-                    order: [[1, 'asc']],
                     initComplete: function () {{
                         this.api()
                             .columns()
@@ -151,16 +140,6 @@ def markdown_table_html(
                             }});
                     }},
                 }});
-                dataTable.on('order.dt search.dt', function () {{
-                    let i = 1;
-             
-                    dataTable
-                        .cells(null, 0, {{ search: 'applied', order: 'applied' }})
-                        .every(function (cell) {{
-                            this.data(i++);
-                        }});
-                }})
-                .draw();
             }}
             if(adv=="tabulator"){{
                 var alignment_center = {json.dumps(alignment_center)};

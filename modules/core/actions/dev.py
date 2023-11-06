@@ -40,7 +40,7 @@ def table_show(
         header: List[str] = None,
         table: List[Dict] = None,
         row: List[Dict] = None,
-        add_no: bool = False,
+        add_no: bool = True,
         alignment_center: Set[str] = None,
         alignment_right: Set[str] = None,
         tag_header: Set[str] = None,
