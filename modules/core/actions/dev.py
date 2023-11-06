@@ -1,12 +1,11 @@
 import re
 import time
 from collections import ChainMap
-from typing import List, Dict, Set, Iterator, Iterable
+from typing import List, Dict, Set, Iterable
 
 import requests
 
-from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header, now, date_str, \
-    str_date
+from base.style import str_json, json_str, str_json_i, Block, is_debug, Fail, Log, get_sw8_header, now
 from frameworks.actions import GetAction, local_request, FastAction, Action, Code, NONE, ChunkAction
 from frameworks.base import ChunkPacket, ChunkStream, RedirectResponse
 from frameworks.context import DefaultRouter
@@ -41,7 +40,7 @@ def table_show(
         header: List[str] = None,
         table: List[Dict] = None,
         row: List[Dict] = None,
-        show_id: bool = True,
+        add_no: bool = False,
         alignment_center: Set[str] = None,
         alignment_right: Set[str] = None,
         tag_header: Set[str] = None,
@@ -92,7 +91,7 @@ def table_show(
         for h in header:
             if h not in each:
                 each[h] = default.get(h)
-    if show_id:
+    if add_no:
         header = ["no"] + header
         for i, each in enumerate(table, start=1):
             each["no"] = i

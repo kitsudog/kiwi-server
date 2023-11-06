@@ -106,6 +106,10 @@ def markdown_table_html(
                     console.log(e);
                 }}
             }});
+            $("table").append("<tfoot><tr></tr></tfoot>")
+            header.forEach((x)=>{{
+                $("tfoot tr").append(`<th>${{x}}</th>`)
+            }});
             let adv = location.search.slice(1).split("&").filter(x=>x.indexOf("adv=")>=0);
             if(adv.length==0){{
                 adv = "datatables";
@@ -113,9 +117,50 @@ def markdown_table_html(
                 adv = adv[0].split("=")[1];    
             }}
             if(adv=="datatables"){{
-                new DataTable('table',{{
+                $("thead tr").prepend("<th>no</th>");
+                $("tbody tr").prepend("<td></td>");
+                $("tfoot tr").prepend("<th>no</th>");
+                var dataTable = $('table').DataTable({{
                     stateSave: true,
+                    columnDefs: [
+                        {{
+                            searchable: false,
+                            orderable: true,
+                            targets: 0,
+                        }}
+                    ],
+                    order: [[1, 'asc']],
+                    initComplete: function () {{
+                        this.api()
+                            .columns()
+                            .every(function () {{
+                                let column = this;
+                                let title = column.footer().textContent;
+                 
+                                // Create input element
+                                let input = document.createElement('input');
+                                input.placeholder = title;
+                                column.footer().replaceChildren(input);
+                 
+                                // Event listener for user input
+                                input.addEventListener('keyup', () => {{
+                                    if (column.search() !== this.value) {{
+                                        column.search(input.value).draw();
+                                    }}
+                                }});
+                            }});
+                    }},
                 }});
+                dataTable.on('order.dt search.dt', function () {{
+                    let i = 1;
+             
+                    dataTable
+                        .cells(null, 0, {{ search: 'applied', order: 'applied' }})
+                        .every(function (cell) {{
+                            this.data(i++);
+                        }});
+                }})
+                .draw();
             }}
             if(adv=="tabulator"){{
                 var alignment_center = {json.dumps(alignment_center)};
@@ -128,6 +173,7 @@ def markdown_table_html(
                     data: table,
                     layout: "fitDataTable",
                     autoColumns: true, 
+                    
                     persistence: {{
                       sort:true,
                       filter:true,
