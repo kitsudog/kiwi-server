@@ -8,7 +8,7 @@ from frameworks.base import HTMLPacket
 def markdown_table_html(
         markdown: str, css: str, table: List[Dict] = [], header: List[str] = [],
         alignment_center=[], alignment_right=[], tag_header=[],
-        number_header=[], date_header=[],
+        number_header=[], date_header=[], title: str = "table",
 ) -> HTMLPacket:
     return HTMLPacket(f"""\
 <!doctype html>
@@ -16,7 +16,7 @@ def markdown_table_html(
 <head>
     <link rel="icon" href="data:image/ico;base64,aWNv">
     <meta charset="utf-8"/>
-    <title>api_list</title>
+    <title>{title}</title>
 </head>
 <body>
     <div id="content">

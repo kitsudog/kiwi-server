@@ -47,6 +47,7 @@ def table_show(
         number_header: Set[str] = None,
         date_header: Set[str] = None,
         default: Dict = None,
+        title: str = None,
         css="",
 ):
     if not header and table:
@@ -74,6 +75,7 @@ def table_show(
         } if default is None else default
         tag_header = {"header-3"} if tag_header is None else tag_header
         date_header = {"date"} if date_header is None else date_header
+        title = title or "table"
     header = header or []
     table: List[Dict] = table or []
     row = row or []
@@ -127,7 +129,7 @@ def table_show(
     return markdown_table_html(
         "\n".join(markdown), css, table=table, header=header,
         alignment_center=list(alignment_center), alignment_right=list(alignment_right),
-        tag_header=list(tag_header), number_header=list(number_header), date_header=list(date_header),
+        tag_header=list(tag_header), number_header=list(number_header), date_header=list(date_header), title=title,
     )
 
 
@@ -213,7 +215,7 @@ curl {__raw['wsgi.url_scheme']}://{__raw['HTTP_HOST']}/{api.replace('.', '/')} -
 #状态 {
     min-width: 50px;
 }
-""")
+""", title="api_log")
 
 
 @GetAction
@@ -363,7 +365,7 @@ def api_list(module="*"):
 #参数 {
     width: 300px;
 }
-""")
+""", title="api_list")
 
 
 @GetAction
