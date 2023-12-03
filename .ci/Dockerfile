@@ -4,7 +4,6 @@ RUN apt update && apt -y install libldap2-dev libsasl2-dev && apt clean
 WORKDIR /app/server
 COPY requirements.txt /app/kiwi/requirements.txt
 ARG PYPI_OPTIONS
-RUN pip install setuptools==65.5.1
 RUN sh -c "cd /app/kiwi;pip install --no-cache-dir --disable-pip-version-check -r requirements.txt ${PYPI_OPTIONS}"
 COPY . /app/kiwi
 RUN cd /app/kiwi && echo "__version__ = '0.0.0'" > _version.py && python setup.py install && rm -fr /app/kiwi

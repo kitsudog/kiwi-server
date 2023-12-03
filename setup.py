@@ -11,12 +11,8 @@ def get_package():
 
 
 def get_version():
-    if os.environ.get("VIRTUAL_ENV"):
-        print("update force")
-        return f"0.1.{time.strftime('%Y%m%d%H%M', time.localtime())}",
-    else:
-        import _version
-        return _version.__version__
+    # 兼容新的setuptools要求
+    return "0.109"
 
 
 setup(
