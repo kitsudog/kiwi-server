@@ -6,8 +6,6 @@ on:
       - '.ci/Dockerfile'
     branches:
       - master
-    tags:
-      - 'v*'
 
 jobs:
   build-and-push:
