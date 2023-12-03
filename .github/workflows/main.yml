@@ -5,7 +5,9 @@ on:
     paths:
       - '.ci/Dockerfile'
     branches:
-      - main
+      - master
+    tags:
+      - 'v*'
 
 jobs:
   build-and-push:
