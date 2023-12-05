@@ -711,12 +711,12 @@ def Suicide(msg: str, /, *, code: int = 1) -> NoReturn:
 
 
 # noinspection PyPep8Naming
-def NeverLog(msg: str) -> NoReturn:
+def NeverLog(msg: str):
     Log(f"[NEVER] {msg}")
 
 
 # noinspection PyPep8Naming
-def Log(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -> NoReturn:
+def Log(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None):
     """
     [ts] first msg
     [ts] prefix msg
@@ -742,7 +742,7 @@ def Log(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -> 
 
 
 # noinspection PyPep8Naming
-def Error(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -> NoReturn:
+def Error(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None):
     """
     [ts] first msg
     [ts] prefix msg
@@ -768,12 +768,12 @@ def Error(msg: str, /, *, first=None, prefix=None, show_ts=True, _logger=None) -
 
 
 # noinspection PyPep8Naming
-def Profile(msg) -> NoReturn:
+def Profile(msg):
     Log(msg, _logger=profiler_logger)
 
 
 # noinspection PyPep8Naming
-def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None) -> NoReturn:
+def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None):
     if e is None:
         Log(("%s\n" % msg) + "".join(traceback.format_stack()), first="[TRACE] + ", prefix="[TRACE] - ")
     else:
@@ -795,7 +795,7 @@ def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None) 
 
 
 # noinspection PyPep8Naming
-def Catch(func: Callable[[], any]) -> NoReturn:
+def Catch(func: Callable[[], any]):
     """
     负责收集异常前的信息
     但是这个本身也有出异常的可能
