@@ -68,7 +68,17 @@ __SW_IP = "127.0.0.1"
 
 
 def init_sky_walking(human: str = "core"):
-    global __SKY_WALKING, __SW_IP, __SW_AGENT_NAMESPACE
+    global __SKY_WALKING, __SW_IP, __SW_AGENT_NAMESPACE, __SW_AGENT_COLLECTOR_BACKEND_SERVICES
+    if not __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
+        __SW_AGENT_COLLECTOR_BACKEND_SERVICES = os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES")
+    if __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
+        host, _, port = __SW_AGENT_COLLECTOR_BACKEND_SERVICES.partition(":")
+        port = port and int(port)
+        from base.utils import is_tcp_connection_ok
+
+        if not is_tcp_connection_ok(host, port or 11800):
+            Error(f"[SW_AGENT_COLLECTOR_BACKEND_SERVICES={__SW_AGENT_COLLECTOR_BACKEND_SERVICES}] not valid")
+            __SW_AGENT_COLLECTOR_BACKEND_SERVICES = None
     if __SKY_WALKING or not __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
         return
     # https://skywalking.apache.org/docs/skywalking-python/latest/readme/

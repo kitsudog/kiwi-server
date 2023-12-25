@@ -6,6 +6,7 @@ from collections import defaultdict
 from gzip import GzipFile
 from io import BufferedReader, BytesIO
 from time import sleep
+from typing import List, Tuple, Optional, Iterable, Callable, Dict, Type
 
 import gevent
 import sentry_sdk
@@ -16,7 +17,6 @@ from jinja2 import Template
 from skywalking import Layer, Component
 from skywalking.trace.span import Span
 from skywalking.trace.tags import TagHttpMethod, TagHttpURL, TagHttpStatusCode
-from typing import List, Tuple, Optional, Iterable, Callable, Dict, Type
 
 from base.style import parse_form_url, Log, is_debug, Block, Trace, Fail, ide_print_pack, ide_print, now, \
     profiler_logger, json_str, Assert, date_str4, is_dev, Catch, has_sentry, Never, SentryBlock, has_sky_walking

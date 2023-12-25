@@ -9,6 +9,7 @@ import datetime
 import os
 import random
 import re
+import socket
 import sys
 import threading
 import time
@@ -19,6 +20,19 @@ from typing import List, Callable, Iterable, Dict, TypedDict, Union
 from xml.etree import ElementTree
 
 from .style import debug_logger, Fail, Log, T, ILock, Block
+
+
+def is_tcp_connection_ok(host, port, timeout=3):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        s.connect((host, port))
+        return True
+    except socket.error as e:
+        print(f"Error connecting to {host} on port {port}: {e}")
+        return False
+    finally:
+        s.close()
 
 
 def re_find(pattern: str, string) -> List[str]:
