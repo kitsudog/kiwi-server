@@ -1,8 +1,7 @@
 import os
-import re
 import time
 
-from setuptools import find_packages, setup
+from setuptools import setup
 
 
 def get_package():
@@ -12,7 +11,13 @@ def get_package():
 
 def get_version():
     # 兼容新的setuptools要求
-    return "0.109"
+    if os.environ.get("VIRTUAL_ENV"):
+        print("update force")
+        _now = time.localtime()
+        return time.strftime('%Y.%m%d.%H%M', _now).replace(".0", "")
+    else:
+        import _version
+        return _version.__version__
 
 
 setup(

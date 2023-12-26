@@ -2,7 +2,7 @@ alembic==1.4.3
 aliyun-python-sdk-core==2.13.35
 aliyun-python-sdk-kms==2.15.0
 #==pypy不支持下面的
-apache-skywalking==0.7.0
+apache-skywalking==1.0.1
 APScheduler==3.6.3
 backports.zoneinfo==0.2.1
 bcrypt==3.2.0
