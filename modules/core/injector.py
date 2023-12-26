@@ -3,7 +3,6 @@ from typing import TypedDict
 
 import jwt
 import ldap
-from ldappool import ConnectionManager
 
 from base.style import Assert, json_str, str_json, Log, now
 from base.utils import base64decode2str
@@ -60,12 +59,9 @@ class LDAPAuthInjector(BasicAuthInjector):
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_PASSWORD"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_BASE_DN"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_FILTER", "uid"))
-            if not LDAPAuthInjector.ldap_conn_mgr:
-                LDAPAuthInjector.ldap_conn_mgr = ConnectionManager(os.environ.get("LDAP_URL"), timeout=10)
-            LDAPAuthInjector.ldap_conn = LDAPAuthInjector.ldap_conn_mgr.connection(
-                os.environ.get("LDAP_BIND_DN"),
-                os.environ.get("LDAP_PASSWORD"),
-            ).__enter__()
+            conn = ldap.initialize(f'ldap://{os.environ.get("LDAP_BIND_DN")}')
+            conn.simple_bind(os.environ.get("LDAP_BIND_PASSWD"))
+            LDAPAuthInjector.ldap_conn = conn
             # 10min 重新链接
             LDAPAuthInjector.ldap_connect_expire = now() + 10 * 60 * 1000
 

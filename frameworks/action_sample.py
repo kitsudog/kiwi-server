@@ -91,6 +91,7 @@ def feature8(aa=("a", 5), ba=("b",)):
 
 # noinspection PyTypeChecker
 def test():
+    # noinspection PyPep8Naming
     def FeatureAssert(response, expect_value, msg):
         if json.loads(response.to_json_str()).get("result") == expect_value:
             return

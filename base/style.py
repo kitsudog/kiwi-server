@@ -23,7 +23,6 @@ import sys
 import time
 import traceback
 import urllib.parse
-import zlib
 from abc import abstractmethod
 from collections import OrderedDict, ChainMap, defaultdict
 from copy import deepcopy
@@ -33,6 +32,7 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn, DefaultDict
 
 import sentry_sdk
+import zlib
 from skywalking.trace.context import get_context
 
 T = TypeVar('T')
@@ -81,19 +81,7 @@ def init_sky_walking(human: str = "core"):
             __SW_AGENT_COLLECTOR_BACKEND_SERVICES = None
     if __SKY_WALKING or not __SW_AGENT_COLLECTOR_BACKEND_SERVICES:
         return
-    # https://skywalking.apache.org/docs/skywalking-python/latest/readme/
-    # https://skywalking.apache.org/docs/skywalking-python/latest/en/setup/envvars/
-    # SW_AGENT_NAME
-    # SW_AGENT_INSTANCE
-    # SW_AGENT_NAMESPACE
-    # SW_AGENT_COLLECTOR_BACKEND_SERVICES
-    # SW_AGENT_PROTOCOL
-    # SW_AGENT_FORCE_TLS
-    # SW_AGENT_AUTHENTICATION
-    # SW_AGENT_LOGGING_LEVEL
-    # SW_AGENT_LOG_REPORTER_ACTIVE
-    # SW_AGENT_LOG_REPORTER_LEVEL
-
+    # https://skywalking.apache.org/docs/skywalking-python/next/en/setup/configuration/
     # noinspection PyPackageRequirements
     from skywalking import agent, config
     if is_debug():
@@ -103,14 +91,18 @@ def init_sky_walking(human: str = "core"):
         __SW_IP = my_ip()
         instance_name = f"{human}@{my_ip()}"
     config.init(
-        service_name=os.environ.get("SW_AGENT_NAME", "kiwi"),
-        service_instance=instance_name,
-        log_reporter_active=True, log_reporter_level="INFO"
+        agent_name=os.environ.get("SW_AGENT_NAME", "kiwi"),
+        agent_protocol=os.environ.get("SW_AGENT_PROTOCOL", "grpc"),
+        agent_instance_name=instance_name,
+        agent_collector_backend_services=os.environ.get("SW_AGENT_COLLECTOR_BACKEND_SERVICES"),
+        agent_namespace=os.environ.get("SW_AGENT_NAMESPACE", ""),
+        agent_logging_level=os.environ.get("SW_AGENT_LOGGING_LEVEL", "INFO"),
+        agent_log_reporter_active=os.environ.get("SW_AGENT_LOG_REPORTER_ACTIVE", True),
+        agent_disable_plugins=os.environ.get("SW_AGENT_DISABLE_PLUGINS", ['']),
     )
-    Log(f"start skywalking[service_name={config.service_name}]"
-        f"[service_instance={config.service_instance}]"
-        f"[collector_address={config.collector_address}]"
-        f"[protocol={config.protocol}]")
+    Log(f"start skywalking[agent_name={config.agent_name}]"
+        f"[agent_collector_backend_services={config.agent_collector_backend_services}]"
+        f"[agent_protocol={config.agent_protocol}]")
     __SW_AGENT_NAMESPACE = config.agent_namespace
 
     agent.start()
@@ -141,8 +133,8 @@ def get_sw8_header():
                     f"{encode(segment.related_traces[0].value)}-"
                     f"{encode(segment.segment_id.value)}-"
                     f"0-"
-                    f"{encode(config.service_name)}-"
-                    f"{encode(config.service_instance)}-"
+                    f"{encode(config.agent_name)}-"
+                    f"{encode(config.agent_instance_name)}-"
                     f"{encode(__SW_IP)}-"
                     f"{encode(__SW_IP)}"
         }

@@ -14,17 +14,14 @@ from time import sleep
 from typing import Iterable, Dict, TypedDict, List, Optional
 
 import click
-import flask_migrate
 import requests
 from flask import Flask, request, Response
 from flask_cors import CORS
-from flask_migrate import Migrate
 from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, Trace, is_dev, Assert, Error, \
-    has_sentry, json_str, init_sky_walking, has_sky_walking, str_json, str_json_ex
+    has_sentry, json_str, init_sky_walking, has_sky_walking, str_json_ex
 from base.utils import read_file, flatten, load_module, write_file
-from frameworks.sql_model import db
 
 # pretty_errors.configure(
 #     line_length=140,
@@ -63,9 +60,7 @@ from frameworks.sql_model import db
 
 if config := load_module("config", fail=False, log_fail=False):
     TAG = config.TAG
-    MYSQL_SUPPORT = False
 else:
-    MYSQL_SUPPORT = True
     TAG = os.environ.get("TAG", "dev")
 if has_sentry():
     import sentry_sdk
@@ -148,6 +143,8 @@ if has_sentry():
         return 1.0
 
 
+    from sentry_sdk.consts import Experiments
+
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
         integrations=[LoggingIntegration(
@@ -163,14 +160,12 @@ if has_sentry():
         send_default_pii=True,
         server_name=os.environ.get("SERVER_NAME") or os.environ.get("HOSTNAME") or os.environ.get(
             "VIRTUAL_HOST") or "no-server-name",
-        request_bodies="always",
-        with_locals=True,
         shutdown_timeout=10,
         environment=os.environ.get("MODE") or "dev",
         before_send=before_send,
         before_breadcrumb=before_breadcrumb,
         traces_sampler=traces_sampler,
-        _experiments={"auto_enabling_integrations": True}
+        _experiments=Experiments(enable_metrics=True),
     )
     Error("StartServer")
 
@@ -180,8 +175,8 @@ app.debug = is_dev()
 app.url_map.strict_slashes = False
 if config:
     app.config.from_object(config)
-    db.init_app(app)
-    migrate = Migrate(app, db)
+    # db.init_app(app)
+    # migrate = Migrate(app, db)
 else:
     pass
 mimetypes.add_type('text/css; charset=utf-8', '.css')
@@ -320,28 +315,6 @@ def stream():
 def after_request(rsp):
     rsp.direct_passthrough = False
     return rsp
-
-
-@app.cli.command()
-def init_database():
-    if not os.path.exists("migrations"):
-        flask_migrate.init(multidb=True)
-        flask_migrate.migrate(message="first")
-    flask_migrate.upgrade()
-    flask_migrate.show()
-
-
-@app.cli.command()
-@click.argument("message")
-def migrate(message):
-    flask_migrate.migrate(message=message)
-    flask_migrate.show()
-
-
-@app.before_first_request
-def init():
-    print("[flask::app::before_first_request] start")
-    print("[flask::app::before_first_request] over")
 
 
 class FlaskWSGIAction:
@@ -507,13 +480,10 @@ def _main(mode: Iterable[str]):
 def test():
     with Block("核心框架的测试"):
         from frameworks import action_sample
-        from frameworks import db_sample
         from frameworks import node_sample
         from frameworks.redis_mongo import is_no_redis
 
         action_sample.test()
-        if not MYSQL_SUPPORT:
-            db_sample.test()
         if not is_no_redis():
             node_sample.test()
 

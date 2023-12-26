@@ -10,7 +10,6 @@ from typing import List, Tuple, Optional, Iterable, Callable, Dict, Type
 
 import gevent
 import sentry_sdk
-import simplejson
 # noinspection PyProtectedMember
 from gevent.pywsgi import Input
 from jinja2 import Template
@@ -28,7 +27,6 @@ from .context import DefaultRouter, Server
 from .models import BaseNode, BaseSaveModel
 from .server_context import SessionContext
 from .session import SessionMgr
-from .sql_model import UUIDModel, UUIDNode
 
 ignore_cmd = {"server.ping"}
 ignore_cmd_last = {}
@@ -180,31 +178,6 @@ class UUIDInjector(Action.Injector):
         return req.session.uuid
 
 
-class UUIDModelInjector(Action.Injector):
-    """
-    针对uuid类的model注入
-    """
-
-    def verify_param(self):
-        Assert(not self.param.startswith("_"), f"参数[{self.param}]必须是[_]开头")
-
-    def verify_hint(self):
-        Assert(issubclass(self.type_hint, UUIDModel), f"参数类型[{self.type_hint}]必须集成[UUIDModel]")
-
-    def from_str_value(self, value: str):
-        hint: UUIDModel = self.type_hint
-        ret = hint.by_uuid(value, fail=False)
-        FBCode.CODE_参数不正确(ret, param_func=lambda: {
-            "uuid": value,
-            "param": self.alias,
-            "hint": self.type_hint.__name__,
-        })
-        return ret
-
-    def human(self):
-        return f"[{self.type_hint.__tablename__}::uuid]"
-
-
 class ModelInjector(Action.Injector):
     def verify_param(self):
         Assert(not self.param.startswith("_"), f"参数[{self.param}]必须是[_]开头")
@@ -227,50 +200,6 @@ class NodeInjector(Action.Injector):
     def from_req(self, req: Request) -> any:
         FBCode.CODE_尚未登录(req.session.is_login)
         return self.type_hint.by_str_id(req.session.uuid, auto_new=True)
-
-
-class UUIDNodeInjector(Action.Injector):
-    """
-    针对uuid类的node注入
-    """
-
-    def verify_hint(self):
-        Assert(issubclass(self.type_hint, UUIDNode), f"参数类型[{self.type_hint}]必须集成[UUIDNode]")
-
-    def from_str_value(self, value: str):
-        hint: UUIDNode = self.type_hint
-        ret = hint.by_uuid_allow_none(value)
-        FBCode.CODE_UUID参数不正确(ret, param_func=lambda: {
-            "uuid": value,
-            "param": self.alias,
-            "hint": self.type_hint.__name__,
-        })
-        return ret
-
-
-# noinspection PyAttributeOutsideInit
-class UUIDModelListInjector(Action.JsonArrayInjector):
-    """
-    针对uuid类的List[model]注入
-    """
-
-    def verify_hint(self):
-        super().verify_hint()
-        Assert(issubclass(self.sub_type, UUIDModel))
-        self.model_cls: Type[UUIDModel] = self.sub_type
-
-    def from_str_value(self, value: str):
-        return list(self.model_cls.by_uuid_list(super().from_str_value(value)).values())
-
-    def from_value(self, value):
-        ret = []
-        for each in super().from_value(value):
-            if isinstance(each, str):
-                ret.append(self.model_cls.by_uuid(each))
-            else:
-                FBCode.CODE_参数类型不对(isinstance(each, self.model_cls))
-                ret.append(each)
-        return ret
 
 
 __STATIC_FILES = {
@@ -439,6 +368,7 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                             params[k] = v
             else:
                 if content.startswith("{") and content.endswith("}"):
+                    import simplejson
                     params.update(simplejson.loads(content))
                 else:
                     params.update(parse_form_url(content))

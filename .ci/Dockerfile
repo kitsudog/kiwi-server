@@ -1,4 +1,4 @@
-ARG  PY_VERSION=3.8
+ARG  PY_VERSION=3.11
 FROM --platform=linux/amd64 python:${PY_VERSION}
 RUN apt update && apt -y install libldap2-dev libsasl2-dev && apt clean
 WORKDIR /app/server

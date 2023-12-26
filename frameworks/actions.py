@@ -3,16 +3,17 @@ import inspect
 import re
 import threading
 import time
+import typing
 from enum import Enum
 from re import Pattern
-from typing import Optional, Callable, Type, List, Iterable, Dict
+from types import NoneType
+from typing import Optional, Callable, Type, List, Iterable, Dict, Mapping, Union
 
 from base.style import Fail, Log, profiler_logger, FailError, Trace, T, str_json_a, Assert, NoThing, Block, str_json, \
     is_debug, SentryBlock, DevError, DevNever
 from base.utils import DecorateHelper, dump_func, str_to_bool, base64decode, load_class, typing_inspect
 from frameworks.base import Request, Response, IPacket, TextResponse, ErrorResponse, ChunkPacket
 from frameworks.models import BaseDef
-from frameworks.sql_model import sql_session
 
 __RE = re.compile('')
 RESPONSE_RET = "$ret$"
@@ -156,12 +157,22 @@ class Action(FastAction):
                     raise Fail("请指定type_hint或者默认值否则将无法确定参数的类型")
             elif type(type_hint) is not type:
                 # 非简单类型
-                if hasattr(type_hint, "__origin__"):
-                    # 采用了`typing hint`的模式
-                    self.type_hint = type_hint.__origin__
+                if _origin := typing.get_origin(type_hint):
+                    typing.get_args(type_hint)
                     self.orig_hint = type_hint
+                    # 采用了`typing hint`的模式
+                    if _origin == Union:
+                        args = list(filter(lambda x: x is not NoneType, typing.get_args(type_hint)))
+                        if len(args) == 1:
+                            # 是 Optional 而已
+                            self.type_hint = args[0]
+                        else:
+                            raise Fail("无法处理的情况")
+                    else:
+                        self.type_hint = type_hint.__origin__
                 else:
                     self.type_hint = type_hint
+                Assert(isinstance(self.type_hint, type), "python的实现可能有变化")
             elif type(type(type_hint)) is type:
                 # 简单类型
                 self.type_hint = type_hint
@@ -362,10 +373,10 @@ class Action(FastAction):
 
     class JsonInjector(Injector):
         def verify_hint(self):
-            Assert(issubclass(self.type_hint, collections.Mapping), f"参数类型[{self.type_hint}]得是[dict]")
+            Assert(issubclass(self.type_hint, Mapping), f"参数类型[{self.type_hint}]得是[dict]")
 
         def verify_value(self, value):
-            Assert(isinstance(value, collections.Mapping), f"值[{value}]的类型得是[dict]")
+            Assert(isinstance(value, Mapping), f"值[{value}]的类型得是[dict]")
 
         def from_str_value(self, value: str):
             if not value[0] == "{":
@@ -377,7 +388,7 @@ class Action(FastAction):
             return str_json(value)
 
         def from_value(self, value):
-            if isinstance(value, collections.Mapping):
+            if isinstance(value, Mapping):
                 return value
             raise Fail(f"数据[{value}]无法转换为`Dict`")
 
@@ -411,7 +422,7 @@ class Action(FastAction):
                     })
 
         def from_value(self, value):
-            if isinstance(value, collections.Iterable):
+            if isinstance(value, Iterable):
                 return list(value)
             FBCode.CODE_参数不是合法数组(False, param_func=lambda: {
                 "param": self.alias,
@@ -443,7 +454,7 @@ class Action(FastAction):
                     })
 
         def from_value(self, value):
-            if isinstance(value, collections.Iterable):
+            if isinstance(value, Iterable):
                 return set(value)
             FBCode.CODE_参数不是合法集合(False, param_func=lambda: {
                 "param": self.alias,
@@ -814,7 +825,8 @@ class Action(FastAction):
                         except Exception as e:
                             self.__reason_dict[param][injector_cls] = e
                 if injector is None:
-                    raise Fail(f"[{self.func_title}::{param}]找不到合适的注入规则")
+                    reason = self.__reason_dict[param]
+                    raise Fail(f"[{self.func_title}::{param}]找不到合适的注入规则[{reason}]")
                 self.__injector_list.append(injector)
 
     def prepare(self):
@@ -884,7 +896,7 @@ class Action(FastAction):
                     response = ret
                 else:
                     ret_type = type(ret)
-                    if isinstance(ret, collections.Mapping):
+                    if isinstance(ret, Mapping):
                         # 常规的返回
                         _ret = 0
                         if RESPONSE_RET in ret:
@@ -896,7 +908,7 @@ class Action(FastAction):
                             ret = dict(ret)
                         response = Response(_ret, ret)
                         span.set_tag("ret", response.ret)
-                    elif isinstance(ret, collections.Iterable):
+                    elif isinstance(ret, Iterable):
                         response = Response(0, ret)
                         span.set_tag("ret", response.ret)
                     elif ret_type in {str}:
@@ -973,12 +985,6 @@ class Action(FastAction):
         finally:
             if _logger := getattr(request, "_log", None):
                 self.wrapper_log(request, response, _logger)
-            if db_session := getattr(sql_session, "_db_session", None):
-                # 用到数据库了
-                if db_session.dirty:
-                    db_session.commit()
-                    Log(f"action[{self.func_title}]commit[{db_session.dirty}]")
-                db_session.remove()
         if has_err:
             if response:
                 pass
