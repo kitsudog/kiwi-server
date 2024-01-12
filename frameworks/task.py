@@ -1,9 +1,34 @@
+import abc
 from abc import abstractmethod
 from time import sleep
+from typing import Callable, Optional
 
 import gevent
+from gevent import Greenlet
+
 from base.interface import ITask
-from base.style import Trace, Log
+from base.style import Trace, Log, now, Block, SentryBlock
+from frameworks.models import SimpleNode
+
+
+class SimpleTask(ITask):
+
+    def __init__(self, name: str, func: Callable, over_func: Callable = None):
+        self.name = name
+        self.func = func
+        self.over_func = over_func
+
+    def run(self):
+        try:
+            with SentryBlock(op="Task", name=self.name):
+                self.func()
+        except Exception as e:
+            Trace(f"任务[{self.name}]执行异常", e)
+        else:
+            pass
+        finally:
+            if self.over_func:
+                self.over_func()
 
 
 class ForeverTask(ITask):
@@ -64,3 +89,24 @@ class UtilSuccessTask(ITask):
         task = gevent.spawn(self.__run)
         gevent.joinall([task])
         Log(f"任务[{self.__class__.__name__}]执行完毕一轮")
+
+
+# noinspection PyMethodMayBeStatic
+class TaskNode:
+    def __init__(self):
+        self.name: str = ""
+        self.task: Optional[ITask] = None
+        self.thread: Optional[Greenlet] = None
+
+    @abc.abstractmethod
+    def next_cycle(self):
+        pass
+
+
+class TaskRuntimeNode(SimpleNode):
+    start: int = 0
+    heartbeat: int = 0
+    expire: int = 0
+
+    def is_running(self) -> bool:
+        return now() < self.expire
