@@ -1,34 +1,14 @@
 import abc
 from abc import abstractmethod
 from time import sleep
-from typing import Callable, Optional
+from typing import Callable, Optional, Iterable, Generator, Iterator
 
 import gevent
 from gevent import Greenlet
 
 from base.interface import ITask
-from base.style import Trace, Log, now, Block, SentryBlock
+from base.style import Trace, Log, now, Block, SentryBlock, T
 from frameworks.models import SimpleNode
-
-
-class SimpleTask(ITask):
-
-    def __init__(self, name: str, func: Callable, over_func: Callable = None):
-        self.name = name
-        self.func = func
-        self.over_func = over_func
-
-    def run(self):
-        try:
-            with SentryBlock(op="Task", name=self.name):
-                self.func()
-        except Exception as e:
-            Trace(f"任务[{self.name}]执行异常", e)
-        else:
-            pass
-        finally:
-            if self.over_func:
-                self.over_func()
 
 
 class ForeverTask(ITask):

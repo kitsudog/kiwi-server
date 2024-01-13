@@ -1,11 +1,80 @@
-from typing import List, Callable
+from abc import abstractmethod, ABC
+from typing import List, Type
 
 import gevent
 
-from base.interface import IMinService
-from base.style import now, DAY_TS, Log
+from base.interface import IMinService, ITask
+from base.style import now, DAY_TS, Log, T, SentryBlock, Trace
 from frameworks.context import Server
-from frameworks.task import TaskNode, TaskRuntimeNode, SimpleTask
+from frameworks.task import TaskNode, TaskRuntimeNode
+
+
+class ISimpleTask(ITask, ABC):
+    def __init__(self, name: str):
+        self.name = name
+
+    def over(self):
+        Log(f"任务[{self.name}]完毕")
+
+
+# noinspection PyMethodMayBeStatic
+class SimpleTask(ISimpleTask):
+
+    @abstractmethod
+    def main(self, *args, **kwargs):
+        pass
+
+    def run(self):
+        try:
+            with SentryBlock(op="Task", name=self.name):
+                self.main()
+        except Exception as e:
+            Trace(f"任务[{self.name}]执行异常", e)
+        else:
+            pass
+        finally:
+            self.over()
+
+
+# noinspection PyMethodMayBeStatic
+class SimpleGroupTask(ISimpleTask):
+    def total(self):
+        return 0
+
+    @abstractmethod
+    def group(self) -> T:
+        pass
+
+    @abstractmethod
+    def main(self, data: T):
+        pass
+
+    # noinspection PyUnusedLocal
+    def human(self, data: T):
+        return None
+
+    def step(self):
+        return 100
+
+    def run(self):
+        step = self.step()
+        total = self.total()
+        try:
+            for i, each in enumerate(self.group(), start=1):
+                try:
+                    if i % step == 0:
+                        Log(f"任务进度[{i}/{total}]")
+                    with SentryBlock(op="Task", name=f"{self.name}#{self.human(each) or '%s/%s' % (i, total)}"):
+                        self.main(each)
+                        gevent.sleep(0)
+                except Exception as e:
+                    Trace(f"任务[{self.name}]执行异常", e)
+        except Exception as e:
+            Trace(f"任务[{self.name}]构造器异常", e)
+        else:
+            pass
+        finally:
+            self.over()
 
 
 class DailyTaskNode(TaskNode):
@@ -20,14 +89,10 @@ class _TaskMgr(IMinService):
     def __init__(self):
         self.task: List[TaskNode] = []
 
-    def add_daily_task(self, *, name: str, func: Callable):
+    def add_daily_task(self, *, name: str, func: Type[ISimpleTask]):
         task = DailyTaskNode()
         task.name = name
-
-        def over_func():
-            Log(f"任务[{name}]完毕")
-
-        task.task = SimpleTask(name, func, over_func)
+        task.task = func(name)
         self.task.append(task)
 
     def cycle_min(self):
