@@ -2,8 +2,9 @@
 from typing import Callable, Dict, Optional, List, TypedDict
 
 import requests
+
 from base.interface import IMinService
-from base.style import Fail, Log, Assert, str_json, json_str, now, has_sky_walking
+from base.style import Fail, Log, Assert, str_json, json_str, now
 from frameworks.actions import FastAction, GetAction
 from frameworks.base import Response, Request, ServerError
 from frameworks.redis_mongo import db_config, is_no_redis

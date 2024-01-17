@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from typing import List, Type
+from typing import List, Type, Tuple
 
 import gevent
 
@@ -37,9 +37,84 @@ class SimpleTask(ISimpleTask):
 
 
 # noinspection PyMethodMayBeStatic
+class SimpleGroupBulkTask(ISimpleTask):
+    def total(self):
+        return -1
+
+    @abstractmethod
+    def group(self) -> T:
+        pass
+
+    @abstractmethod
+    def bulk_main(self, data: List[T]):
+        pass
+
+    def bulk_main_error(self, data: T):
+        pass
+
+    # noinspection PyUnusedLocal
+    def human(self, data: T):
+        return None
+
+    def step(self):
+        return 100
+
+    def run(self):
+        step = self.step()
+        total = self.total()
+        tmp: List[Tuple[int, T]] = []
+
+        def func():
+            if total <= 0:
+                Log(f"任务进度[{tmp[0][0]}~{tmp[-1][0]}/...]")
+            else:
+                Log(f"任务进度[{tmp[0][0]}~{tmp[-1][0]}/{total}]")
+            data_list = list(tmp)
+            tmp.clear()
+            try:
+                with SentryBlock(
+                        op="Task",
+                        name=f"{self.name}#{'[%s~%s]/%s' % (data_list[0][0], data_list[-1][0], total)}",
+                ):
+                    self.bulk_main(list(map(lambda x: x[1], data_list)))
+            except Exception as ee:
+                Trace(f"任务[{self.name}]批量执行{'[%s~%s]/%s' % (data_list[0][0], data_list[-1][0], total)}异常", ee)
+                if self.__class__.bulk_main_error == SimpleGroupBulkTask.bulk_main_error:
+                    # 没有实现
+                    return
+                for ii, data in data_list:
+                    human = ""
+                    try:
+                        # noinspection PyNoneFunctionAssignment
+                        human = self.human(data)
+                        with SentryBlock(op="Task", name=f"{self.name}修复性执行#{'%s/%s' % (ii, total)}"):
+                            self.bulk_main_error(data)
+                    except Exception as eee:
+                        Trace(f"任务[{self.name}]批量执行细化[{human or ii}]异常", eee)
+
+        try:
+            i = 0
+            for i, each in enumerate(self.group(), start=1):
+                tmp.append((i, each))
+                gevent.sleep(0)
+                if len(tmp) == step:
+                    func()
+            total = i
+            if len(tmp):
+                func()
+                gevent.sleep(0)
+        except Exception as e:
+            Trace(f"任务[{self.name}]构造器异常", e)
+        else:
+            pass
+        finally:
+            self.over()
+
+
+# noinspection PyMethodMayBeStatic
 class SimpleGroupTask(ISimpleTask):
     def total(self):
-        return 0
+        return -1
 
     @abstractmethod
     def group(self) -> T:
@@ -63,12 +138,16 @@ class SimpleGroupTask(ISimpleTask):
             for i, each in enumerate(self.group(), start=1):
                 try:
                     if i % step == 0:
-                        Log(f"任务进度[{i}/{total}]")
+                        if total <= 0:
+                            Log(f"任务进度[{i}/...]")
+                        else:
+                            Log(f"任务进度[{i}/{total}]")
                     with SentryBlock(op="Task", name=f"{self.name}#{self.human(each) or '%s/%s' % (i, total)}"):
                         self.main(each)
-                        gevent.sleep(0)
                 except Exception as e:
                     Trace(f"任务[{self.name}]执行异常", e)
+                finally:
+                    gevent.sleep(0)
         except Exception as e:
             Trace(f"任务[{self.name}]构造器异常", e)
         else:

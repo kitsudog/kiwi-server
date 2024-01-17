@@ -8,16 +8,16 @@ import os
 import re
 import time
 from collections import ChainMap
-from math import ceil
 from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict
 
 import gevent
 import pymongo
 from gevent.event import AsyncResult
+from math import ceil
 from redis import Connection, RedisError
 from redis.client import Redis
 
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block, DAY_TS
 
 pool_map = {
 
@@ -289,7 +289,7 @@ class DailyRedis:
         prefix = self._prefix()
         return self.__db.exists(*map(lambda x: f"{prefix}|{x}", names))
 
-    def set(self, name, value, *, ex=None, px=None, nx=False, xx=False, keep_ttl=False):
+    def set(self, name, value, *, ex=24 * 3600, px=DAY_TS, nx=False, xx=False, keep_ttl=False):
         return self.__db.set(f"{self._prefix()}|{name}", value, ex=ex, px=px, nx=nx, xx=xx, keepttl=keep_ttl)
 
     def get(self, name):
@@ -396,12 +396,16 @@ db_stats_ex = db_redis(3)
 db_other = db_redis(4)
 db_config = db_redis(0)  # 作为动态配置的存储
 db_online = session_redis(11) or db_redis(11)
-db_daily = DailyRedis(session_redis(12) or db_redis(12))  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
-db_hour = HourRedis(session_redis(12) or db_redis(12))  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
-db_minute = MinuteRedis(session_redis(12) or db_redis(12))  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_ex = session_redis(12) or db_redis(12)
+db_daily = DailyRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_hour = HourRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_minute = MinuteRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
 db_session = session_redis(13) or db_redis(13)  # 专门给会话用的
 db_mgr = db_redis(14)
 db_trash = db_redis(15)
+db_daily_expire_days = int(os.environ.get("DAILY_REDIS_EXPIRE_DAYS", 7))
+db_daily_expire_mode = os.environ.get("DAILY_REDIS_EXPIRE_MODE", "ttl")
+Assert(db_daily_expire_mode in {"ttl", "del"}, "DAILY_REDIS_EXPIRE_MODE只支持(ttl|del)")
 
 
 # noinspection PyBroadException

@@ -777,7 +777,7 @@ def Profile(msg):
 # noinspection PyPep8Naming
 def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None):
     if e is None:
-        Log(("%s\n" % msg) + "".join(traceback.format_stack()), first="[TRACE] + ", prefix="[TRACE] - ")
+        Error(("%s\n" % msg) + "".join(traceback.format_stack()), first="[TRACE] + ", prefix="[TRACE] - ")
     else:
         if __SENTRY:
             try:
@@ -791,7 +791,7 @@ def Trace(msg: str, e: Optional[Exception], /, *, raise_e=False, exc_info=None):
 %s %s
 %s\
 ''' % (msg, e, trace_info.strip())
-        Log(out, first="[TRACE] + ", prefix="[TRACE] - ")
+        Error(out, first="[TRACE] + ", prefix="[TRACE] - ")
         if raise_e:
             raise e
 
@@ -1177,6 +1177,14 @@ def today_zero() -> int:
     """
     today = datetime.date.today()
     return int(time.mktime(today.timetuple()) * 1000)
+
+
+def yesterday_zero() -> int:
+    """
+    返回昨天0点时的格林威治时间(ms)
+    """
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    return int(time.mktime(yesterday.timetuple()) * 1000)
 
 
 def tomorrow_zero() -> int:
