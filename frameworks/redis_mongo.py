@@ -14,10 +14,10 @@ import gevent
 import pymongo
 from gevent.event import AsyncResult
 from math import ceil
-from redis import Connection, RedisError
+from redis import RedisError
 from redis.client import Redis
 
-from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block, DAY_TS
+from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json, SentryBlock, Block
 
 pool_map = {
 
@@ -276,8 +276,9 @@ def mongo_mget(key_list: Sequence[str], model: Optional[str] = None, active=True
 
 # noinspection PyMethodMayBeStatic,SpellCheckingInspection
 class DailyRedis:
-    def __init__(self, db):
+    def __init__(self, db, expire_days):
         self.__db: Redis = db
+        self.__expire_days = expire_days
 
     def _prefix(self):
         return time.strftime("%Y-%m-%d", time.localtime())
@@ -289,7 +290,9 @@ class DailyRedis:
         prefix = self._prefix()
         return self.__db.exists(*map(lambda x: f"{prefix}|{x}", names))
 
-    def set(self, name, value, *, ex=24 * 3600, px=DAY_TS, nx=False, xx=False, keep_ttl=False):
+    def set(self, name, value, *, ex=None, px=None, nx=False, xx=False, keep_ttl=False):
+        if ex is None and px is None:
+            ex = self.__expire_days * 24 * 3600
         return self.__db.set(f"{self._prefix()}|{name}", value, ex=ex, px=px, nx=nx, xx=xx, keepttl=keep_ttl)
 
     def get(self, name):
@@ -326,7 +329,7 @@ class DailyRedis:
         return self.__db.hsetnx(f"{self._prefix()}|{name}", key, value)
 
     def hmset(self, name, mapping):
-        return self.__db.hmset(f"{self._prefix()}|{name}", mapping)
+        return self.__db.hset(f"{self._prefix()}|{name}", mapping=mapping)
 
     def hmget(self, name, keys, *args):
         return self.__db.hmget(f"{self._prefix()}|{name}", keys, *args)
@@ -390,6 +393,10 @@ class MinuteRedis(DailyRedis):
         return time.strftime("%Y-%m-%d_%H:%M", time.localtime())
 
 
+db_daily_expire_days = int(os.environ.get("DAILY_REDIS_EXPIRE_DAYS", 7))
+db_daily_expire_mode = os.environ.get("DAILY_REDIS_EXPIRE_MODE", "ttl")
+Assert(db_daily_expire_mode in {"ttl", "del"}, "DAILY_REDIS_EXPIRE_MODE只支持(ttl|del)")
+
 db_model = db_redis(1)
 db_model_ex = db_redis(2)
 db_stats_ex = db_redis(3)
@@ -397,25 +404,12 @@ db_other = db_redis(4)
 db_config = db_redis(0)  # 作为动态配置的存储
 db_online = session_redis(11) or db_redis(11)
 db_ex = session_redis(12) or db_redis(12)
-db_daily = DailyRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
-db_hour = HourRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
-db_minute = MinuteRedis(db_ex)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_daily = DailyRedis(db_ex, expire_days=db_daily_expire_days)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_hour = HourRedis(db_ex, expire_days=db_daily_expire_days)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
+db_minute = MinuteRedis(db_ex, expire_days=db_daily_expire_days)  # 有日期前缀缓存(会根据日期自动清理最长不会保留超过7d)
 db_session = session_redis(13) or db_redis(13)  # 专门给会话用的
 db_mgr = db_redis(14)
 db_trash = db_redis(15)
-db_daily_expire_days = int(os.environ.get("DAILY_REDIS_EXPIRE_DAYS", 7))
-db_daily_expire_mode = os.environ.get("DAILY_REDIS_EXPIRE_MODE", "ttl")
-Assert(db_daily_expire_mode in {"ttl", "del"}, "DAILY_REDIS_EXPIRE_MODE只支持(ttl|del)")
-
-
-# noinspection PyBroadException
-def __check_redis_conn(connection: Connection):
-    # todo: 判断是否断开连接
-    try:
-        connection.can_read()
-        return True
-    except Exception:
-        return False
 
 
 # noinspection PyShadowingNames
@@ -637,6 +631,7 @@ def mapping_get(model, mapping, prop="_key") -> Optional[str]:
                     db_model_ex.set("%s:%s" % (model, mapping), ret, ex=3 * 24 * 3600)
                 else:
                     span.set_tag("none", True)
+    # noinspection PyTypeChecker
     return ret
 
 
