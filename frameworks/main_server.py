@@ -551,7 +551,19 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
             finally:
                 SessionMgr.destroy(_session)
     elif method == "GET":
-        headers = [("Access-Control-Allow-Origin", "*"), ("Server", "FLASK")]
+        headers = [("Server", "FLASK")]
+        with Block("CROS"):
+            if origin := environ.get("HTTP_ORIGIN") or environ.get("HTTP_REFERER"):
+                if origin.startswith("https"):
+                    headers.append(("Access-Control-Allow-Origin", f"https://{origin[8:].partition('/')[0]}"))
+                else:
+                    # noinspection HttpUrlsUsage
+                    headers.append(("Access-Control-Allow-Origin", f"http://{origin[7:].partition('/')[0]}"))
+                if ALLOW_ORIGIN and origin.lower() in ALLOW_ORIGIN:
+                    headers.append(("Access-Control-Allow-Credentials", "true"))
+                elif "http://localhost:" in origin:
+                    # 方便本地调试
+                    headers.append(("Access-Control-Allow-Credentials", "true"))
         if path == "/":
             # 只允许index.html
             path = "/index.html"
