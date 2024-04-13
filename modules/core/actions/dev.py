@@ -449,6 +449,14 @@ def chunk4(__stream: ChunkStream):
 
 
 @GetAction
+def chunk5(__stream: ChunkStream, num=10, has_over=True):
+    __stream.Log(f"start waiting {num} sec")
+    time.sleep(num)
+    if has_over:
+        __stream.Log(f"end waiting {num} sec")
+
+
+@GetAction
 def forward_test():
     return forward(None, "manager.user_by_user_id", param={})
 

@@ -650,7 +650,15 @@ def forward_response(
     request = Request(session, cmd, param, stream=stream)
     SessionMgr.action_start(session, request)
     response = DefaultRouter.do(request)
-    SessionMgr.action_over(session, request, response)
+    if isinstance(response, ChunkPacket):
+        stream = response.chunk_stream()
+        if isinstance(stream, ChunkStream):
+            def over():
+                SessionMgr.action_over(session, request, response)
+
+            stream.end_handler = over
+    else:
+        SessionMgr.action_over(session, request, response)
     if isinstance(response, ChunkPacket):
         # PATCH:
         def func():
@@ -680,7 +688,15 @@ def packet_route(session, cmd: str, params: dict, orig_getter: Callable[[], str]
         request.orig_getter = orig_getter
         SessionMgr.action_start(session, request)
         response = DefaultRouter.do(request)
-        SessionMgr.action_over(session, request, response)
+        if isinstance(response, ChunkPacket):
+            stream = response.chunk_stream()
+            if isinstance(stream, ChunkStream):
+                def over():
+                    SessionMgr.action_over(session, request, response)
+
+                stream.end_handler = over
+        else:
+            SessionMgr.action_over(session, request, response)
         if response is None:
             response = TextResponse("succ")
             ret = response.attach(request)

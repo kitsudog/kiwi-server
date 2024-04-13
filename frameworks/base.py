@@ -4,9 +4,9 @@ from abc import abstractmethod
 from typing import Optional, List, Dict, TYPE_CHECKING, Callable, Generator
 
 import gevent
-from gevent._gevent_cqueue import Queue
+from gevent.queue import Empty, Queue
 
-from base.style import Fail, ExJSONEncoder, json_str, is_debug, Trace
+from base.style import Fail, ExJSONEncoder, json_str, is_debug, Trace, Block, Log, now
 from base.utils import base64
 
 if TYPE_CHECKING:
@@ -203,17 +203,17 @@ def empty_str_getter() -> str:
 class ChunkStream:
     OVER = bytes()
 
-    def __init__(self, request: 'Request', forward: 'ChunkStream' = None):
+    def __init__(self, request: 'Request', forward: 'ChunkStream' = None, end_handler=None):
         self.__last_char = None
         self.request = request
         self.func = None
         self.params = None
         self.__start = False
         self.__end = False
-        # noinspection PyUnresolvedReferences
         self.__buffer = Queue()
         self.__forward_buffer = forward.__buffer if forward else None
-        self.__timeout = 30
+        self.__timeout = 3
+        self.end_handler = end_handler
 
     def __iter__(self):
         if not self.__start:
@@ -235,14 +235,27 @@ class ChunkStream:
                     self.__end = True
 
             self.__start = gevent.spawn(func)
+        _start = now()
+        _logger_expire = _start + 3000
         while not self.__end:
-            ret = self.__buffer.get(timeout=self.__timeout)
-            if self.__forward_buffer:
-                self.__forward_buffer.put(ret)
-            if ret is ChunkStream.OVER:
-                break
-            elif ret:
-                yield ret
+            try:
+                ret = self.__buffer.get(timeout=self.__timeout)
+                if self.__forward_buffer:
+                    self.__forward_buffer.put(ret)
+                if ret is ChunkStream.OVER:
+                    if self.end_handler:
+                        with Block("收尾", fail=False):
+                            self.end_handler()
+                    break
+                elif ret:
+                    if now() > _logger_expire:
+                        Log(f"stream action {self.request.human} ... {(now() - _start) // 1000} sec")
+                        _logger_expire = now() + 3000
+                    yield ret
+            except Empty:
+                Log(f"stream action {self.request.human} ... {(now() - _start) // 1000} sec")
+        if now() - _start > 1000:
+            Log(f"stream action {self.request.human} OVER {(now() - _start) / 1000} sec")
 
     def timeout(self, value):
         self.__timeout = value
@@ -286,6 +299,7 @@ class Request(JsonPacket):
         self.rsp_cookie = {}  # type: dict
         self.rsp_header = {}  # type: dict
         self.stream = ChunkStream(self, stream) if stream else None
+        self.__human = ""
 
     def init_stream(self):
         if not self.stream:
@@ -313,6 +327,14 @@ class Request(JsonPacket):
 
     def __str__(self):
         return f"[{self.cmd}:{self.session.get_uuid()}]"
+
+    @property
+    def human(self):
+        if not self.__human:
+            self.__human = f"[{self.cmd}:{self.session.get_uuid()}]"
+            with Block("", fail=False):
+                self.__human = str(self.action)
+        return self.__human
 
 
 class Response(JsonPacket):
