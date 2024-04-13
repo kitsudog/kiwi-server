@@ -16,7 +16,6 @@ from typing import Iterable, Dict, TypedDict, List, Optional
 import click
 import requests
 from flask import Flask, request, Response
-from flask_cors import CORS
 from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, Trace, is_dev, Assert, Error, \
@@ -170,7 +169,8 @@ if has_sentry():
     Error("StartServer")
 
 app = Flask(__name__, root_path=os.path.curdir)
-cors = CORS(app, resources={r"/*": {"origins": "*"}})
+# Todo: 完善的cors前先暂停
+# cors = CORS(app, resources={r"/*": {"origins": "*"}})
 app.debug = is_dev()
 app.url_map.strict_slashes = False
 if config:
