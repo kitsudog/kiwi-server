@@ -59,8 +59,8 @@ class LDAPAuthInjector(BasicAuthInjector):
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_PASSWORD"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_BASE_DN"))
             FBCode.CODE_LDAP配置缺失(os.environ.get("LDAP_FILTER", "uid"))
-            conn = ldap.initialize(f'ldap://{os.environ.get("LDAP_BIND_DN")}')
-            conn.simple_bind(os.environ.get("LDAP_BIND_PASSWD"))
+            conn = ldap.initialize(os.environ.get("LDAP_URL"))
+            conn.simple_bind(os.environ.get("LDAP_PASSWORD"))
             LDAPAuthInjector.ldap_conn = conn
             # 10min 重新链接
             LDAPAuthInjector.ldap_connect_expire = now() + 10 * 60 * 1000
