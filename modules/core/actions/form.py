@@ -38,10 +38,17 @@ var original=Object.keys(window);
     }
     (async () => {
         jsonData = (await Vue.http.get(`%(path)s.json`)).data;
+        window.$handleChange = console.log;
         const __config = {
             el: '.app',
             methods: {
-                handleChange: console.log,
+                handleChange: (newValue, prop)=>{
+                  if(window.handleChange){
+                    window.handleChange.call(null, prop, newValue);
+                  }else{
+                    console.log("handleChange", prop, "=>", newValue);
+                  }
+                },
             },
         }
         Object.keys(window).filter(x => original.indexOf(x) < 0).forEach(x => {
@@ -54,16 +61,20 @@ var original=Object.keys(window);
             }
             console.info("inject", x, __config[x]);
         });
-        __config.data = function() {
+        __config.data = await (async function() {
             let tmp = (typeof window.data==="function"?window.data.call(this):window.data) || {};
             tmp.jsonData = jsonData;
-            window.$kfb_dynamicData = tmp.dynamicData = (typeof window.dynamicData==="function"?window.dynamicData.call(this):window.dynamicData) || tmp.dynamicData || {};
+            tmp.dynamicData = (typeof window.dynamicData==="function"?window.dynamicData.call(this):window.dynamicData) || tmp.dynamicData || {};
+            if(tmp.dynamicData instanceof Promise){
+              tmp.dynamicData = await tmp.dynamicData;
+            }
+            window.$kfb_dynamicData = tmp.dynamicData;
             Object.keys(__config.methods).filter(x=>typeof __config.methods[x]==="function").forEach(x=>{
                 window.$kfb_dynamicData[x] = __config.methods[x];
             });
             tmp.config = (typeof window.config==="function"?window.config():window.config) || tmp.config || {};
             return tmp;
-        }
+        })();
         Vue.config.productionTip = true;
         Vue.config.devtools=true;
         if(!__config.methods.handleSubmit){

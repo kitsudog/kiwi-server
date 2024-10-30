@@ -1,209 +1,243 @@
 {
-  "list": [
-    {
-      "type": "card",
-      "label": "数据补充",
-      "icon": "icon-qiapian",
-      "list": [
-        {
-          "type": "textarea",
-          "label": "原始csv",
-          "options": {
-            "width": "100%",
-            "minRows": 10,
-            "maxRows": 6,
-            "maxLength": null,
-            "defaultValue": "User ID,Balance,Create Date,Effect,Locked Balance,Update Date,Team Earn,Country\n5ff70fb58fd5c1000ac41bd9,\"1,935.65\",\"2022/6/10, 20:15\",TRUE,0,\"2022/6/28, 13:59\",\"1,935.65\",MY",
-            "clearable": false,
-            "hidden": false,
-            "disabled": false,
-            "placeholder": "请输入"
-          },
-          "model": "orig",
-          "key": "textarea_1656643604386",
-          "help": "",
-          "rules": [
-            {
-              "required": true,
-              "message": "必填项"
-            }
-          ]
-        },
-        {
-          "type": "checkbox",
-          "label": "补全的数据",
-          "icon": "icon-duoxuan1",
-          "options": {
-            "disabled": false,
-            "hidden": false,
-            "defaultValue": [
-              "bee"
-            ],
-            "dynamicKey": "",
-            "dynamic": false,
-            "options": [
-              {
-                "value": "telephone",
-                "label": "电话"
-              },
-              {
-                "value": "bee",
-                "label": "bee数量"
-              },
-              {
-                "value": "country",
-                "label": "国家"
-              },
-              {
-                "value": "nickname",
-                "label": "昵称"
-              },
-              {
-                "value": "username",
-                "label": "邀请码"
-              },
-              {
-                "value": "language",
-                "label": "语言"
-              },
-              {
-                "value": "inviter",
-                "label": "上家"
-              },
-              {
-                "value": "last_login",
-                "label": "最后登录"
-              },
-              {
-                "value": "email",
-                "label": "email"
-              },
-              {
-                "value": "facebook",
-                "label": "facebook绑定"
-              },
-              {
-                "value": "apple",
-                "label": "Apple绑定"
-              },
-              {
-                "value": "gmail",
-                "label": "Gmail绑定"
-              },
-              {
-                "value": "wechat",
-                "label": "微信绑定"
-              },
-              {
-                "value": "qq",
-                "label": "qq绑定"
-              }
-            ]
-          },
-          "model": "fields",
-          "key": "checkbox_1656643648013",
-          "help": "",
-          "rules": [
-            {
-              "required": false,
-              "message": "必填项"
-            }
-          ]
-        },
-        {
-          "type": "divider",
-          "label": "分割线",
-          "icon": "icon-fengexian",
-          "options": {
-            "orientation": "left"
-          },
-          "key": "divider_1656643885306"
-        },
-        {
-          "type": "button",
-          "label": "提交",
-          "icon": "icon-button-remove",
-          "options": {
-            "type": "primary",
-            "handle": "submit",
-            "dynamicFun": "",
-            "hidden": false,
-            "disabled": false
-          },
-          "key": "button_1656643891426"
-        },
-        {
-          "type": "button",
-          "label": "按钮",
-          "icon": "icon-button-remove",
-          "options": {
-            "type": "danger",
-            "handle": "dynamic",
-            "dynamicFun": "debug",
-            "hidden": false,
-            "disabled": false
-          },
-          "key": "button_1669661346322"
-        },
-        {
-          "type": "divider",
-          "label": "分割线",
-          "icon": "icon-fengexian",
-          "options": {
-            "orientation": "left"
-          },
-          "key": "divider_1656644244909"
-        },
-        {
-          "type": "textarea",
-          "label": "结果",
-          "icon": "icon-edit",
-          "options": {
-            "width": "100%",
-            "minRows": 10,
-            "maxRows": 6,
-            "maxLength": null,
-            "defaultValue": "",
-            "clearable": false,
-            "hidden": false,
-            "disabled": true,
-            "placeholder": "请等待"
-          },
-          "model": "output",
-          "key": "textarea_1656644163284",
-          "help": "",
-          "rules": [
-            {
-              "required": false,
-              "message": "必填项"
-            }
-          ]
-        }
-      ],
-      "key": "card_1656643930051"
-    }
-  ],
-  "config": {
-    "layout": "horizontal",
-    "labelCol": {
-      "xs": 4,
-      "sm": 4,
-      "md": 4,
-      "lg": 4,
-      "xl": 4,
-      "xxl": 4
-    },
-    "labelWidth": 100,
-    "labelLayout": "flex",
-    "wrapperCol": {
-      "xs": 18,
-      "sm": 18,
-      "md": 18,
-      "lg": 18,
-      "xl": 18,
-      "xxl": 18
-    },
-    "hideRequiredMark": false,
-    "customStyle": ""
-  }
+	"list": [
+		{
+			"type": "card",
+			"label": "数据补充",
+			"icon": "icon-qiapian",
+			"list": [
+				{
+					"type": "textarea",
+					"label": "原始csv",
+					"options": {
+						"width": "100%",
+						"minRows": 10,
+						"maxRows": 6,
+						"maxLength": null,
+						"defaultValue": "User ID,Balance,Create Date,Effect,Locked Balance,Update Date,Team Earn,Country\n5ff70fb58fd5c1000ac41bd9,\"1,935.65\",\"2022/6/10, 20:15\",TRUE,0,\"2022/6/28, 13:59\",\"1,935.65\",MY",
+						"clearable": false,
+						"hidden": false,
+						"disabled": false,
+						"placeholder": "请输入"
+					},
+					"model": "orig",
+					"key": "textarea_1656643604386",
+					"help": "",
+					"rules": [
+						{
+							"required": true,
+							"message": "必填项"
+						}
+					]
+				},
+				{
+					"type": "checkbox",
+					"label": "补全的数据",
+					"icon": "icon-duoxuan1",
+					"options": {
+						"disabled": false,
+						"hidden": false,
+						"defaultValue": [
+							"bee"
+						],
+						"dynamicKey": "",
+						"dynamic": false,
+						"options": [
+							{
+								"value": "telephone",
+								"label": "电话"
+							},
+							{
+								"value": "bee",
+								"label": "bee数量"
+							},
+							{
+								"value": "country",
+								"label": "国家"
+							},
+							{
+								"value": "nickname",
+								"label": "昵称"
+							},
+							{
+								"value": "username",
+								"label": "邀请码"
+							},
+							{
+								"value": "language",
+								"label": "语言"
+							},
+							{
+								"value": "inviter",
+								"label": "上家"
+							},
+							{
+								"value": "last_login",
+								"label": "最后登录"
+							},
+							{
+								"value": "email",
+								"label": "email"
+							},
+							{
+								"value": "facebook",
+								"label": "facebook绑定"
+							},
+							{
+								"value": "apple",
+								"label": "Apple绑定"
+							},
+							{
+								"value": "gmail",
+								"label": "Gmail绑定"
+							},
+							{
+								"value": "wechat",
+								"label": "微信绑定"
+							},
+							{
+								"value": "qq",
+								"label": "qq绑定"
+							}
+						]
+					},
+					"model": "fields",
+					"key": "checkbox_1656643648013",
+					"help": "",
+					"rules": [
+						{
+							"required": false,
+							"message": "必填项"
+						}
+					]
+				},
+				{
+					"type": "divider",
+					"label": "分割线",
+					"icon": "icon-fengexian",
+					"options": {
+						"orientation": "left"
+					},
+					"key": "divider_1656643885306"
+				},
+				{
+					"type": "button",
+					"label": "提交",
+					"icon": "icon-button-remove",
+					"options": {
+						"type": "primary",
+						"handle": "submit",
+						"dynamicFun": "",
+						"hidden": false,
+						"disabled": false
+					},
+					"key": "button_1656643891426"
+				},
+				{
+					"type": "button",
+					"label": "按钮",
+					"icon": "icon-button-remove",
+					"options": {
+						"type": "danger",
+						"handle": "dynamic",
+						"dynamicFun": "debug",
+						"hidden": false,
+						"disabled": false
+					},
+					"key": "button_1669661346322"
+				},
+				{
+					"type": "divider",
+					"label": "分割线",
+					"icon": "icon-fengexian",
+					"options": {
+						"orientation": "left"
+					},
+					"key": "divider_1656644244909"
+				},
+				{
+					"type": "textarea",
+					"label": "结果",
+					"icon": "icon-edit",
+					"options": {
+						"width": "100%",
+						"minRows": 10,
+						"maxRows": 6,
+						"maxLength": null,
+						"defaultValue": "",
+						"clearable": false,
+						"hidden": false,
+						"disabled": true,
+						"placeholder": "请等待"
+					},
+					"model": "output",
+					"key": "textarea_1656644163284",
+					"help": "",
+					"rules": [
+						{
+							"required": false,
+							"message": "必填项"
+						}
+					]
+				}
+			],
+			"key": "card_1656643930051"
+		},
+		{
+			"type": "select",
+			"label": "下拉选择器",
+			"options": {
+				"width": "100%",
+				"multiple": false,
+				"disabled": false,
+				"clearable": false,
+				"hidden": false,
+				"placeholder": "请选择",
+				"dynamicKey": "all_data",
+				"dynamic": true,
+				"options": [
+					{
+						"value": "1",
+						"label": "下拉框1"
+					},
+					{
+						"value": "2",
+						"label": "下拉框2"
+					}
+				],
+				"showSearch": false
+			},
+			"model": "select_1730324314541",
+			"key": "select_1730324314541",
+			"help": "",
+			"rules": [
+				{
+					"required": false,
+					"message": "必填项"
+				}
+			]
+		}
+	],
+	"config": {
+		"layout": "horizontal",
+		"labelCol": {
+			"xs": 4,
+			"sm": 4,
+			"md": 4,
+			"lg": 4,
+			"xl": 4,
+			"xxl": 4
+		},
+		"labelWidth": 100,
+		"labelLayout": "flex",
+		"wrapperCol": {
+			"xs": 18,
+			"sm": 18,
+			"md": 18,
+			"lg": 18,
+			"xl": 18,
+			"xxl": 18
+		},
+		"hideRequiredMark": false,
+		"customStyle": ""
+	}
 }

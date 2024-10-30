@@ -4,9 +4,14 @@ data = function () {
     }
 }
 
-dynamicData = function () {
+handleChange = function (prop, value) {
+    console.log("change", prop, value);
+}
+
+dynamicData = async function () {
     return {
         testSend: this.debug,
+        all_data: [{title: "title", value: 123}],
     }
 }
 
