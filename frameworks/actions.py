@@ -1,4 +1,4 @@
-import collections
+import inspect
 import inspect
 import re
 import threading
@@ -1061,7 +1061,7 @@ class Code:
                     # 套用的话就重新覆盖内部提示
                     obj = cls()
                     obj.gen = True
-                    obj.alias = True
+                    obj.alias = v.alias or True
                     obj.code = v.code
                     obj.msg = v.msg
                     obj.internal_msg = internal_msg
@@ -1100,11 +1100,12 @@ class Code:
                 setattr(cls, k, obj)
                 Code.__pool__[obj.code] = obj
 
-    def __init__(self, code: int = 500, error: str = "", internal_msg: str = "", *, status_code=500):
+    def __init__(self, code: int = 500, error: str = "", internal_msg: str = "", *, status_code=500,
+                 alias: Union[bool | int] = False):
         self.code = code
         self.msg = error
         self.gen = False
-        self.alias = False
+        self.alias = alias
         self.internal_msg: str = internal_msg
         self.error = None
         self.need_param = []
@@ -1142,7 +1143,8 @@ class Code:
                     "src": each.group(),
                     "param": each.groups()[0],
                 })
-        self.error = BusinessException(self.code, self.msg, internal_msg=self.internal_msg or self.msg,
+        self.error = BusinessException(self.alias or self.code, self.msg,
+                                       internal_msg=f"[code={self.code}]{self.internal_msg}" or self.msg,
                                        status_code=self.status_code)
 
     # noinspection PyMethodMayBeStatic
@@ -1189,13 +1191,15 @@ class Code:
                 if log is False:
                     pass
                 elif log or Code.default_log:
-                    Log(f"业务失败[{internal_msg}]")
-                raise BusinessException(self.code, msg, internal_msg=internal_msg, status_code=self.status_code)
+                    Log(f"[code={self.code}]业务失败[{internal_msg}]")
+                raise BusinessException(self.alias or self.code, msg,
+                                        internal_msg=f"[code={self.code}]{self.internal_msg}" or self.msg,
+                                        status_code=self.status_code)
             else:
                 if log is False:
                     pass
                 elif log or Code.default_log:
-                    Log(f"业务失败[{self.internal_msg}]")
+                    Log(f"[code={self.code}]业务失败[{self.internal_msg}]")
                 raise self.error
         return expr
 
@@ -1220,8 +1224,8 @@ class FBCode(Code):
     CODE_登录失效 = Code(1112, "unauthorized", status_code=401)
     CODE_缺少参数 = Code(1113, "invalid request", "缺少参数[${param}]", status_code=400)
     CODE_框架错误 = Code(1114, "server error", status_code=500)
-    CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401)
+    CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401, alias=1110)
     CODE_不支持会话 = Code(1116, "server error", status_code=500)
-    CODE_无法登陆 = Code(1117, "unauthorized", "无法登陆[${value}]", status_code=401)
+    CODE_无法登陆 = Code(1117, "unauthorized", "无法登陆[${value}]", status_code=401, alias=1110)
     CODE_参数格式不对 = Code(1118, "invalid request [${param}]", "参数[${param}]格式不对[${error}]", status_code=400)
     CODE_重复的路由规则 = Code(1119, "invalid route", "invalid route[${path}]", status_code=400)
