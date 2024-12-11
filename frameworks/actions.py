@@ -1192,9 +1192,11 @@ class Code:
                     pass
                 elif log or Code.default_log:
                     Log(f"[code={self.code}]业务失败[{internal_msg}]")
-                raise BusinessException(self.alias or self.code, msg,
-                                        internal_msg=f"[code={self.code}]{self.internal_msg}" or self.msg,
-                                        status_code=self.status_code)
+                raise BusinessException(
+                    self.alias or self.code, msg,
+                    internal_msg=f"[code={self.code}]{internal_msg}" or msg,
+                    status_code=self.status_code
+                )
             else:
                 if log is False:
                     pass
