@@ -33,12 +33,12 @@ class DailyRedisCleanerTask(SimpleGroupBulkTask):
 
     def group(self) -> T:
         yesterday = datetime.fromtimestamp(today_zero() // 1000) - timedelta(days=1)
-        expire_days = timedelta(days=db_daily_expire_days)
-        yesterday_expire = yesterday + expire_days
         prefix = yesterday.strftime("%Y-%m-%d")
+        prefix_month = [f"{prefix[:4]}-{month:02}-00" for month in range(1, 13)]
+        prefix_week = [f"{prefix[:4]}-00-00_{week:02}" for week in range(53)]
         prefix_hours = [f"{prefix}_{hour:02}" for hour in range(24)]
         prefix_minutes = [f"{prefix}_{hour:02}:{minute:02}" for hour in range(24) for minute in range(60)]
-        prefix_set = set([prefix] + prefix_hours + prefix_minutes)
+        prefix_set = set([prefix] + prefix_hours + prefix_minutes + prefix_month + prefix_week)
         prefix_exp = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}(_[0-9]{2}(:[0-9]{2})?)?")
         if db_daily_expire_mode == "del":
             for each in db_ex.scan_iter(match=f"*|*", count=10):  # type: str
@@ -51,6 +51,8 @@ class DailyRedisCleanerTask(SimpleGroupBulkTask):
                     else:
                         yield None, each
         elif db_daily_expire_mode == "ttl":
+            expire_days = timedelta(days=db_daily_expire_days)
+            yesterday_expire = yesterday + expire_days
             for each in db_ex.scan_iter(match=f"*|*", count=10):  # type: str
                 lh, _, _ = each.partition("|")
                 if lh in prefix_set:

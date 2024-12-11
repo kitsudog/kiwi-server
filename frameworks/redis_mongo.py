@@ -8,12 +8,13 @@ import os
 import re
 import time
 from collections import ChainMap
+from datetime import timedelta
+from math import ceil
 from typing import Callable, List, Optional, Sequence, Iterable, Dict, Union, TypedDict
 
 import gevent
 import pymongo
 from gevent.event import AsyncResult
-from math import ceil
 from redis import RedisError
 from redis.client import Redis
 
@@ -22,6 +23,9 @@ from base.style import Fail, ExJSONEncoder, Log, now, json_str, Assert, str_json
 pool_map = {
 
 }
+
+db_daily_expire_days = int(os.environ.get("DAILY_REDIS_EXPIRE_DAYS", 7))
+db_daily_expire_mode = os.environ.get("DAILY_REDIS_EXPIRE_MODE", "ttl")
 
 
 def is_no_redis():
@@ -276,9 +280,9 @@ def mongo_mget(key_list: Sequence[str], model: Optional[str] = None, active=True
 
 # noinspection PyMethodMayBeStatic,SpellCheckingInspection
 class DailyRedis:
-    def __init__(self, db, expire_days):
+    def __init__(self, db, expire_days=db_daily_expire_days):
         self.__db: Redis = db
-        self.__expire_days = expire_days
+        self.__expire_days = timedelta(days=expire_days)
 
     def _prefix(self):
         return time.strftime("%Y-%m-%d", time.localtime())
@@ -292,7 +296,7 @@ class DailyRedis:
 
     def set(self, name, value, *, ex=None, px=None, nx=False, xx=False, keep_ttl=False):
         if ex is None and px is None:
-            ex = self.__expire_days * 24 * 3600
+            ex = self.__expire_days
         return self.__db.set(f"{self._prefix()}|{name}", value, ex=ex, px=px, nx=nx, xx=xx, keepttl=keep_ttl)
 
     def get(self, name):
@@ -380,6 +384,22 @@ class DailyRedis:
         return self.__db.rpushx(f"{self._prefix()}|list|{name}", value)
 
 
+class WeeklyRedis(DailyRedis):
+    def __init__(self, db):
+        super().__init__(db, expire_days=7)
+
+    def _prefix(self):
+        return time.strftime("%Y-00-00_%U", time.localtime())
+
+
+class MonthRedis(DailyRedis):
+    def __init__(self, db):
+        super().__init__(db, expire_days=30)
+
+    def _prefix(self):
+        return time.strftime("%Y-%m-00", time.localtime())
+
+
 # noinspection PyMethodMayBeStatic
 class HourRedis(DailyRedis):
     def _prefix(self):
@@ -393,8 +413,6 @@ class MinuteRedis(DailyRedis):
         return time.strftime("%Y-%m-%d_%H:%M", time.localtime())
 
 
-db_daily_expire_days = int(os.environ.get("DAILY_REDIS_EXPIRE_DAYS", 7))
-db_daily_expire_mode = os.environ.get("DAILY_REDIS_EXPIRE_MODE", "ttl")
 Assert(db_daily_expire_mode in {"ttl", "del"}, "DAILY_REDIS_EXPIRE_MODE只支持(ttl|del)")
 
 db_model = db_redis(1)
