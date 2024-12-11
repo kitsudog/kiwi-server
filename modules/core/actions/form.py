@@ -39,6 +39,12 @@ var original=Object.keys(window);
     (async () => {
         jsonData = (await Vue.http.get(`%(path)s.json`)).data;
         window.$handleChange = console.log;
+        if(window.prepareData && typeof window.prepareData === "function"){
+          window.prepareData = window.prepareData();
+          if(window.prepareData instanceof Promise){
+            window.prepareData = await window.prepareData;
+          }
+        }
         const __config = {
             el: '.app',
             methods: {

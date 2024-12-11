@@ -54,9 +54,17 @@ def db_redis(index) -> Redis:
         # todo: 关闭之前的
         key = "%s:%s" % (host, port)
         if pool_map.get(key, None) is None:
-            pool_map[key] = redis.ConnectionPool(host=host, port=port, password=password, db=0, decode_responses=True)
+            # 创建一个新的连接池(确保不是默认的连接池)
+            pool_map[key] = redis.ConnectionPool(host=host, port=port, password=password, decode_responses=True)
         pool = pool_map[key]
-        db = redis.StrictRedis(host=host, port=port, decode_responses=True, password=password, connection_pool=pool)
+        db = redis.StrictRedis(
+            host=host,
+            port=port,
+            db=index,
+            decode_responses=True,
+            password=password,
+            connection_pool=pool,
+        )
     return db
 
 
