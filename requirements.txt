@@ -1,4 +1,4 @@
-apache-skywalking==1.0.1
+apache-skywalking==1.1.0
 aliyun-python-sdk-core==2.13.35
 aliyun-python-sdk-kms==2.15.0
 # Flask==3
