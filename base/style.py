@@ -23,6 +23,7 @@ import sys
 import time
 import traceback
 import urllib.parse
+import zlib
 from abc import abstractmethod
 from collections import OrderedDict, ChainMap, defaultdict
 from copy import deepcopy
@@ -32,8 +33,6 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import List, Callable, Iterable, Dict, TypeVar, Optional, Mapping, Union, NoReturn, DefaultDict
 
 import sentry_sdk
-import zlib
-from skywalking.trace.context import get_context
 
 T = TypeVar('T')
 KT = TypeVar('KT')

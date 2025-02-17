@@ -142,8 +142,6 @@ if has_sentry():
         return 1.0
 
 
-    from sentry_sdk.consts import Experiments
-
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
         integrations=[LoggingIntegration(
@@ -164,7 +162,9 @@ if has_sentry():
         before_send=before_send,
         before_breadcrumb=before_breadcrumb,
         traces_sampler=traces_sampler,
-        _experiments=Experiments(enable_metrics=True),
+        _experiments={
+            "continuous_profiling_auto_start": True,
+        }
     )
     Error("StartServer")
 
