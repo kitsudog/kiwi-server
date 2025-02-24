@@ -12,3 +12,4 @@ redis==5.0.1
 requests==2.31.0
 simplejson==3.19.2
 sentry-sdk==2.21.0
+PySocks==1.7.1
