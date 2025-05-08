@@ -83,9 +83,10 @@ def session_redis(index):
 
 
 def _mongo(cate):
+    name = os.environ.get("MONGO_NAME", "model")
     admin_name = os.environ.get("MONGO_AUTH", "admin")
     if uri := os.environ.get("MONGO_URI"):
-        service, auth, username, password, host, _, port, name, query = re.compile(
+        service, auth, username, password, host, _, port, admin_name, query = re.compile(
             r"mongodb([^:]*)://(([^:]+):([^@]+)?@)?([^:]+)(:(\d+))?/([^?]*)\??(.*)"
         ).fullmatch(uri).groups()
         uri_human = f'mongodb://{host}:{port or 27017}/{name}'
