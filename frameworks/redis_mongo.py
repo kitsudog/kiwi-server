@@ -83,11 +83,12 @@ def session_redis(index):
 
 
 def _mongo(cate):
+    admin_name = os.environ.get("MONGO_AUTH", "admin")
     if uri := os.environ.get("MONGO_URI"):
         service, auth, username, password, host, _, port, name, query = re.compile(
             r"mongodb([^:]*)://(([^:]+):([^@]+)?@)?([^:]+)(:(\d+))?/([^?]*)\??(.*)"
         ).fullmatch(uri).groups()
-        uri_human = f'mongodb://{host}:{port or 27017}/{name or os.environ.get("MONGO_NAME", "model")}'
+        uri_human = f'mongodb://{host}:{port or 27017}/{name}'
     else:
         host = os.environ.get("MONGO_HOST", "127.0.0.1")
         port = os.environ.get("MONGO_PORT", "27017")
@@ -102,7 +103,7 @@ def _mongo(cate):
             exit(1)
         if len(auth):
             auth = "%s@" % auth
-        uri = f'mongodb://{auth}{host}:{port}/{name}'
+        uri = f'mongodb://{auth}{host}:{port}/{admin_name}'
         uri_human = f'mongodb://{host}:{port}/{name}'
     Log(f"链接mongo[{uri_human}]")
     db = pymongo.MongoClient(
@@ -112,7 +113,7 @@ def _mongo(cate):
         serverSelectionTimeoutMS=1000,
         connect=True,
     )
-    db.server_info()
+    print(list(db[name].list_collections()))
     collection = db[name][cate]
     if "_key_1" not in collection.index_information():
         collection.create_index("_key", unique=True, sparse=True, background=True)

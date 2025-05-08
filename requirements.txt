@@ -1,4 +1,4 @@
-apache-skywalking==1.1.0
+apache-skywalking==0.8.0
 aliyun-python-sdk-core==2.13.35
 aliyun-python-sdk-kms==2.15.0
 # Flask==3
@@ -9,7 +9,7 @@ python-ldap==3.4.4
 pymongo[srv]==3.11.4
 PyJWT==2.8.0
 redis==5.0.1
-requests==2.31.0
-simplejson==3.19.2
-sentry-sdk==2.21.0
+requests
+simplejson
+sentry-sdk
 PySocks==1.7.1
