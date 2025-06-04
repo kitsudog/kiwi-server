@@ -19,6 +19,10 @@ def markdown_table_html(
     <title>{title}</title>
 </head>
 <body>
+    <div class="for-tabulator" id="exporter" style="display:none">
+        <button id="download-csv">Download CSV</button>
+        <button id="download-json">Download JSON</button>
+    </div>
     <div id="content">
     <pre>
 {markdown}
@@ -27,33 +31,19 @@ def markdown_table_html(
     <!--<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>-->
     <script src="js/showdown.min.js"></script>
     <script src="js/jquery-3.3.1.min.js"></script>
-    <script src="js/jquery.tablesort.min.js"></script>
     <script src="js/jquery.json-viewer.js"></script>
     <script src="js/luxon.min.js"></script>
     <script type="text/javascript" src="js/tabulator.min.js"></script>
     <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.columnControl.min.js"></script>
     <link href="css/jquery.dataTables.min.css" type="text/css" rel="stylesheet">
     <link href="css/tabulator.min.css" type="text/css" rel="stylesheet">
     <link href="css/jquery.json-viewer.css" type="text/css" rel="stylesheet">
+    <link href="css/columnControl.dataTables.min.css" rel="stylesheet">
     <script>
         var content = document.getElementById('content');
         var markdown = content.getElementsByTagName("pre")[0].innerHTML;
         // content.innerHTML = marked(markdown);
-        $(function(){{
-            $.tablesort.defaults = {{
-                compare: function(a, b) {{		// Function used to compare values when sorting.
-                    try{{
-                        a = parseInt(a)||a;
-                        b = parseInt(b)||b;
-                    }}catch(e){{
-                    }}
-                    if (a > b) return 1;
-                    else if (a < b) return -1;
-                    else return 0;
-                }}
-            }};
-            $('table').tablesort();
-        }});
     </script>
     <script>
         if(window.location.href.indexOf("debug")<0){{
@@ -119,29 +109,11 @@ def markdown_table_html(
             if(adv=="datatables"){{
                 var dataTable = $('table').DataTable({{
                     stateSave: true,
-                    initComplete: function () {{
-                        this.api()
-                            .columns()
-                            .every(function () {{
-                                let column = this;
-                                let title = column.footer().textContent;
-                 
-                                // Create input element
-                                let input = document.createElement('input');
-                                input.placeholder = title;
-                                column.footer().replaceChildren(input);
-                 
-                                // Event listener for user input
-                                input.addEventListener('keyup', () => {{
-                                    if (column.search() !== this.value) {{
-                                        column.search(input.value).draw();
-                                    }}
-                                }});
-                            }});
-                    }},
+                    columnControl: ['searchDropdown'],
                 }});
             }}
             if(adv=="tabulator"){{
+                $(document.getElementsByClassName("for-tabulator")).show();
                 var alignment_center = {json.dumps(alignment_center)};
                 var alignment_right = {json.dumps(alignment_right)};
                 var tag_header = {json.dumps(tag_header)};
@@ -177,6 +149,14 @@ def markdown_table_html(
                         }},
                         headerFilter: true,
                     }})),
+                }});
+                //trigger download of data.csv file
+                document.getElementById("download-csv").addEventListener("click", function(){{
+                    tabulator.download("csv", "data.csv");
+                }});
+                //trigger download of data.json file
+                document.getElementById("download-json").addEventListener("click", function(){{
+                    tabulator.download("json", "data.json");
                 }});
                 tabulator.on("tableBuilt", ()=>{{
                     $("[name=json1]").css("text-align", "left").each((i, each)=>{{
