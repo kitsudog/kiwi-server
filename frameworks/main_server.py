@@ -311,61 +311,64 @@ def wsgi_handler(environ, start_response, skip_status: Optional[Iterable[int]] =
                     Log("未知的提交类型[%s]" % content_type)
             if isinstance(content, bytes):
                 # 提交的是文件数据
-                if content_type.startswith("multipart/form-data; boundary=") or content_type.startswith(
-                        "multipart/form-data; charset=UTF-8; boundary="):
-                    a, b, c = content_type.partition("boundary=")
-                    assert a.startswith("multipart/form-data;")
-                    boundary = c.encode("utf-8")
-                    _sign = b"--%s" % boundary
-                    content_list = content.split(_sign + b"\r\n")[1:]  # type: List[bytes]
-                    _sign = _sign + b"--\r\n"
-                    if content_list[-1].endswith(_sign):
-                        content_list[-1] = content_list[-1][:-len(_sign)]
-                    _params_tmp = defaultdict(lambda: [])
-                    for each in content_list:
-                        i1 = each.find(b"\r\n")
-                        Assert(i1 > 0)
-                        content_start = each.find(b"\r\n\r\n") + 4
-                        head_line = each[:content_start - 4].decode("utf-8").splitlines()
-                        head_dict = dict(
-                            map(lambda kv: (kv[0].lower(), kv[1].strip()), map(lambda x: x.split(":"), head_line)))
-                        content_disposition = {}
-                        if head_dict["content-disposition"].strip().lower().startswith("form-data"):
-                            for k, v in map(lambda x: x.split("="), head_dict["content-disposition"].split(";")[1:]):
-                                k = k.strip().lower()
-                                if len(v) > 1 and v[0] == v[-1] and v[0] in "\"'":
-                                    v = v[1:-1]
-                                content_disposition[k] = v
-                                if k == "name":
-                                    raw_bytes = each[content_start:-2]
-                                    content_type = head_dict.get("content-type", "text/plain").lower()
-                                    content_type1, _, content_type2 = content_type.partition("/")
-                                    if content_type1 == "text" or content_type in {
-                                        "application/javascript", "image/svg+xml",
-                                    }:
-                                        header = raw_bytes[:4]
-                                        if header.startswith(
-                                                (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
-                                        ):
-                                            if header[:3] == codecs.BOM_UTF8:
-                                                string = raw_bytes.decode("utf-8-sig")
-                                            elif header[:2] == codecs.BOM_UTF16_LE:
-                                                string = raw_bytes[2:].decode("utf-16-le")
-                                            elif header[:2] == codecs.BOM_UTF16_BE:
-                                                string = raw_bytes[2:].decode("utf-16-be")
+                if content_type.startswith("multipart/form-data"):
+                    if "boundary=" in content_type:
+                        a, b, c = content_type.partition("boundary=")
+                        assert a.startswith("multipart/form-data;")
+                        boundary = c.encode("utf-8")
+                        _sign = b"--%s" % boundary
+                        content_list = content.split(_sign + b"\r\n")[1:]  # type: List[bytes]
+                        _sign = _sign + b"--\r\n"
+                        if content_list[-1].endswith(_sign):
+                            content_list[-1] = content_list[-1][:-len(_sign)]
+                        _params_tmp = defaultdict(lambda: [])
+                        for each in content_list:
+                            i1 = each.find(b"\r\n")
+                            Assert(i1 > 0)
+                            content_start = each.find(b"\r\n\r\n") + 4
+                            head_line = each[:content_start - 4].decode("utf-8").splitlines()
+                            head_dict = dict(
+                                map(lambda kv: (kv[0].lower(), kv[1].strip()), map(lambda x: x.split(":"), head_line)))
+                            content_disposition = {}
+                            if head_dict["content-disposition"].strip().lower().startswith("form-data"):
+                                for k, v in map(lambda x: x.split("="),
+                                                head_dict["content-disposition"].split(";")[1:]):
+                                    k = k.strip().lower()
+                                    if len(v) > 1 and v[0] == v[-1] and v[0] in "\"'":
+                                        v = v[1:-1]
+                                    content_disposition[k] = v
+                                    if k == "name":
+                                        raw_bytes = each[content_start:-2]
+                                        content_type = head_dict.get("content-type", "text/plain").lower()
+                                        content_type1, _, content_type2 = content_type.partition("/")
+                                        if content_type1 == "text" or content_type in {
+                                            "application/javascript", "image/svg+xml",
+                                        }:
+                                            header = raw_bytes[:4]
+                                            if header.startswith(
+                                                    (codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
+                                            ):
+                                                if header[:3] == codecs.BOM_UTF8:
+                                                    string = raw_bytes.decode("utf-8-sig")
+                                                elif header[:2] == codecs.BOM_UTF16_LE:
+                                                    string = raw_bytes[2:].decode("utf-16-le")
+                                                elif header[:2] == codecs.BOM_UTF16_BE:
+                                                    string = raw_bytes[2:].decode("utf-16-be")
+                                                else:
+                                                    raise Never()
                                             else:
-                                                raise Never()
+                                                string = raw_bytes.decode("utf-8")
+                                            _params_tmp[v].append(ActionStr(string))
                                         else:
-                                            string = raw_bytes.decode("utf-8")
-                                        _params_tmp[v].append(ActionStr(string))
-                                    else:
-                                        _params_tmp[v].append(ActionBytes(raw_bytes))
+                                            _params_tmp[v].append(ActionBytes(raw_bytes))
 
-                    for k, v in _params_tmp.items():
-                        if len(v) == 1:
-                            params[k] = v[0]
-                        else:
-                            params[k] = v
+                        for k, v in _params_tmp.items():
+                            if len(v) == 1:
+                                params[k] = v[0]
+                            else:
+                                params[k] = v
+                    else:
+                        Log(f"出现了一个不兼容的form表单格式[{content_type}]")
             else:
                 if content.startswith("{") and content.endswith("}"):
                     import simplejson
