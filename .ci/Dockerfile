@@ -30,5 +30,7 @@ ONBUILD ENV LOG_NAME=$LOG_NAME \
     SPRING_CLOUD_CONFIG_SERVER_URL=$SPRING_CLOUD_CONFIG_SERVER_URL \
     DB_NAME=$DB_NAME \
     GIT_TAG=$GIT_TAG
+ONBUILD COPY requirements.txt /app/server/
+ONBUILD RUN cat requirements.txt|grep 'git+https://github.com/kitsudog/kiwi-server.git@' -v | pip install -r /dev/stdin
 CMD sh -c "test '$IMAGE_DEBUG' = TRUE && (echo image debug...;tail -f /dev/stdout) || (python -m kiwi --tag=$GIT_TAG )"
 
