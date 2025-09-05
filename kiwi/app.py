@@ -19,7 +19,7 @@ from flask import Flask, request, Response
 from skywalking.trace.span import NoopSpan
 
 from base.style import Block, Log, is_debug, active_console, Trace, is_dev, Assert, Error, \
-    has_sentry, json_str, init_sky_walking, has_sky_walking, str_json_ex
+    has_sentry, json_str, init_sky_walking, has_sky_walking, str_json_ex, hour_zero, today_zero, now, HOUR_TS, DAY_TS
 from base.utils import read_file, flatten, load_module, write_file
 
 # pretty_errors.configure(
@@ -60,7 +60,13 @@ from base.utils import read_file, flatten, load_module, write_file
 if config := load_module("config", fail=False, log_fail=False):
     TAG = config.TAG
 else:
-    TAG = os.environ.get("TAG", "dev")
+    TAG = os.environ.get("TAG", os.environ.get("GIT_TAG", "dev"))
+__now = now()
+__sentry_traces_sample_rate = os.environ.get("SENTRY_TRACES_SAMPLE_RATE", 0.01)
+__sentry_traces_sampler_dau_count = os.environ.get("SENTRY_TRACES_SAMPLE_DAU_COUNT")
+__sentry_traces_sampler_dau_expire = today_zero() + DAY_TS
+__sentry_traces_sampler_hau_count = os.environ.get("SENTRY_TRACES_SAMPLE_HAU_COUNT")
+__sentry_traces_sampler_hau_expire = hour_zero(__now) + HOUR_TS
 if has_sentry():
     import sentry_sdk
     from sentry_sdk.integrations.logging import LoggingIntegration
@@ -137,9 +143,15 @@ if has_sentry():
         return crumb
 
 
-    # noinspection PyUnusedLocal
     def traces_sampler(sampling_context: SamplingContextDict):
-        return 1.0
+        global __sentry_traces_sampler_dau_count, __sentry_traces_sampler_hau_count
+        __sentry_traces_sampler_dau_count -= 1
+        __sentry_traces_sampler_hau_count -= 1
+        if __sentry_traces_sampler_dau_count < 0:
+            return 0
+        if __sentry_traces_sampler_hau_count < 0:
+            return 0
+        return __sentry_traces_sample_rate
 
 
     sentry_sdk.init(
@@ -148,8 +160,8 @@ if has_sentry():
             level=logging.INFO,  # Capture info and above as breadcrumbs
             event_level=logging.ERROR  # Send errors as events
         ), RedisIntegration()],
-        traces_sample_rate=1.0,
-        sample_rate=1.0,
+        traces_sample_rate=__sentry_traces_sample_rate,
+        sample_rate=os.environ.get("SENTRY_SAMPLE_RATE", 1.0),
         debug=is_debug(),
         release=TAG,
         max_breadcrumbs=100,
@@ -158,10 +170,10 @@ if has_sentry():
         server_name=os.environ.get("SERVER_NAME") or os.environ.get("HOSTNAME") or os.environ.get(
             "VIRTUAL_HOST") or "no-server-name",
         shutdown_timeout=10,
-        environment=os.environ.get("MODE") or "dev",
+        environment=os.environ.get("SPRING_PROFILES_ACTIVE") or "dev",
         before_send=before_send,
         before_breadcrumb=before_breadcrumb,
-        traces_sampler=traces_sampler,
+        traces_sampler=traces_sampler if __sentry_traces_sampler_dau_count or __sentry_traces_sampler_hau_count else None,
         _experiments={
             "continuous_profiling_auto_start": True,
         }

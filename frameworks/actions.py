@@ -1223,7 +1223,7 @@ class FBCode(Code):
     CODE_参数不是JSON = Code(1109, "invalid request", "参数不是合法JSON[${value}]", status_code=400)
     CODE_缺少AUTH = Code(1110, "unauthorized", status_code=401)
     CODE_参数类型不对 = Code(1111, "invalid request", status_code=400)
-    CODE_登录失效 = Code(1112, "unauthorized", status_code=401)
+    CODE_登录失效 = Code(1112, "unauthorized", "用户的票过期了[user_id=${user_id}][create_at=${create_at}][expire_at=${expire_at}]", status_code=401, )
     CODE_缺少参数 = Code(1113, "invalid request", "缺少参数[${param}]", status_code=400)
     CODE_框架错误 = Code(1114, "server error", status_code=500)
     CODE_LDAP配置缺失 = Code(1115, "ldap invalid", status_code=401, alias=1110)
